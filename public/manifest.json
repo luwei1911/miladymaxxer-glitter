@@ -5,8 +5,18 @@
   "description": "Elevate milady. Diminish the rest. On-device avatar detection for X.",
   "permissions": ["storage", "unlimitedStorage"],
   "host_permissions": ["https://x.com/*", "https://twitter.com/*"],
+  "icons": {
+    "16": "milady-logo.png",
+    "48": "milady-logo.png",
+    "128": "milady-logo.png"
+  },
   "action": {
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "milady-logo.png",
+      "48": "milady-logo.png",
+      "128": "milady-logo.png"
+    }
   },
   "content_scripts": [
     {
