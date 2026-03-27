@@ -387,7 +387,7 @@ INDEX_HTML = """<!doctype html>
       }
       .layout {
         display: grid;
-        grid-template-columns: 220px minmax(320px, 440px) minmax(340px, 1fr);
+        grid-template-columns: 220px minmax(0, 1fr);
         gap: 20px;
         align-items: start;
       }
@@ -396,8 +396,37 @@ INDEX_HTML = """<!doctype html>
         border: 1px solid #ddd;
         padding: 16px;
       }
+      .workspace-panel,
       .full-width {
-        grid-column: 1 / -1;
+        grid-column: 2;
+      }
+      .sidebar-panel {
+        grid-column: 1;
+      }
+      .workspace-panel {
+        display: grid;
+        gap: 16px;
+      }
+      .tab-bar {
+        display: flex;
+        gap: 8px;
+      }
+      .tab-button[data-active="true"] {
+        background: #111;
+        color: white;
+      }
+      .view[hidden] {
+        display: none;
+      }
+      .individual-layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+      .individual-stack {
+        display: grid;
+        gap: 20px;
       }
       button,
       select {
@@ -600,6 +629,12 @@ INDEX_HTML = """<!doctype html>
         font-size: 12px;
         margin-top: 8px;
       }
+      .workspace-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+      }
       a {
         color: #0f62fe;
       }
@@ -607,7 +642,7 @@ INDEX_HTML = """<!doctype html>
   </head>
   <body>
     <div class="layout">
-      <section class="panel">
+      <section class="panel sidebar-panel">
         <h2>Queues</h2>
         <label>
           Queue
@@ -619,37 +654,55 @@ INDEX_HTML = """<!doctype html>
         </div>
         <div class="hint">Hotkeys: 1=milady, 2=not_milady, 3=unclear, x=skip, z=undo</div>
       </section>
-      <section class="panel">
-        <h2 id="title">No item</h2>
-        <div id="status-strip" class="status-strip"></div>
-        <img id="preview" alt="avatar preview" />
-        <div class="actions">
-          <button data-label="milady">1 Milady</button>
-          <button data-label="not_milady">2 Not Milady</button>
-          <button data-label="unclear">3 Unclear</button>
-          <button id="skip">Skip</button>
-        </div>
-        <div class="history-header">
-          <h2>Recent labels</h2>
-        </div>
-        <div id="history-grid" class="history-grid"></div>
-        <p id="history-empty" class="history-empty" hidden>No recent labels yet.</p>
-      </section>
-      <section class="panel">
-        <h2>Metadata</h2>
-        <dl id="metadata"></dl>
-      </section>
-      <section class="panel">
-        <div class="grid-toolbar">
-          <h2>Batch mode</h2>
-          <div class="batch-actions">
-            <button id="batch-refresh">Load batch</button>
-            <button id="batch-commit">Enter: commit batch</button>
+      <section class="panel workspace-panel">
+        <div class="workspace-header">
+          <div class="tab-bar">
+            <button id="tab-individual" class="tab-button" data-active="true" type="button">Individual</button>
+            <button id="tab-batch" class="tab-button" data-active="false" type="button">Batch</button>
           </div>
         </div>
-        <div class="hint">Numpad 7/8/9 4/5/6 1/2/3 cycles each tile. Click also cycles. Enter commits.</div>
-        <div id="batch-panel" class="batch-panel">
-          <div id="batch-grid" class="batch-grid"></div>
+        <div id="view-individual" class="view">
+          <div class="individual-layout">
+            <section class="panel">
+              <h2 id="title">No item</h2>
+              <div id="status-strip" class="status-strip"></div>
+              <img id="preview" alt="avatar preview" />
+              <div class="actions">
+                <button data-label="milady">1 Milady</button>
+                <button data-label="not_milady">2 Not Milady</button>
+                <button data-label="unclear">3 Unclear</button>
+                <button id="skip">Skip</button>
+              </div>
+            </section>
+            <div class="individual-stack">
+              <section class="panel">
+                <h2>Metadata</h2>
+                <dl id="metadata"></dl>
+              </section>
+              <section class="panel">
+                <div class="history-header">
+                  <h2>Recent labels</h2>
+                </div>
+                <div id="history-grid" class="history-grid"></div>
+                <p id="history-empty" class="history-empty" hidden>No recent labels yet.</p>
+              </section>
+            </div>
+          </div>
+        </div>
+        <div id="view-batch" class="view" hidden>
+          <section class="panel">
+            <div class="grid-toolbar">
+              <h2>Batch mode</h2>
+              <div class="batch-actions">
+                <button id="batch-refresh">Load batch</button>
+                <button id="batch-commit">Enter: commit batch</button>
+              </div>
+            </div>
+            <div class="hint">Numpad 7/8/9 4/5/6 1/2/3 cycles each tile. Click also cycles. Enter commits.</div>
+            <div id="batch-panel" class="batch-panel">
+              <div id="batch-grid" class="batch-grid"></div>
+            </div>
+          </section>
         </div>
       </section>
       <section class="panel full-width">
@@ -681,11 +734,16 @@ INDEX_HTML = """<!doctype html>
       const batchGrid = document.getElementById("batch-grid");
       const batchRefresh = document.getElementById("batch-refresh");
       const batchCommit = document.getElementById("batch-commit");
+      const tabIndividual = document.getElementById("tab-individual");
+      const tabBatch = document.getElementById("tab-batch");
+      const viewIndividual = document.getElementById("view-individual");
+      const viewBatch = document.getElementById("view-batch");
 
       let index = 0;
       let selectedSha = null;
       let batchItems = [];
       let selectedBatchIndex = 0;
+      let activeView = "individual";
       const batchLabelOrder = ["not_milady", "milady", "unclear"];
       const numpadIndexMap = {
         Numpad7: 0,
@@ -719,6 +777,15 @@ INDEX_HTML = """<!doctype html>
           ? currentLabeledFilter
           : "all";
         undo.disabled = !payload.canUndo;
+      }
+
+      function setActiveView(nextView) {
+        activeView = nextView;
+        const isIndividual = nextView === "individual";
+        tabIndividual.dataset.active = String(isIndividual);
+        tabBatch.dataset.active = String(!isIndividual);
+        viewIndividual.hidden = !isIndividual;
+        viewBatch.hidden = isIndividual;
       }
 
       async function loadItem() {
@@ -966,6 +1033,14 @@ INDEX_HTML = """<!doctype html>
       labeledFilter.addEventListener("change", loadLabeledGrid);
       batchRefresh.addEventListener("click", loadBatch);
       batchCommit.addEventListener("click", commitBatch);
+      tabIndividual.addEventListener("click", async () => {
+        setActiveView("individual");
+        await loadItem();
+      });
+      tabBatch.addEventListener("click", async () => {
+        setActiveView("batch");
+        await loadBatch();
+      });
       skip.addEventListener("click", async () => {
         selectedSha = null;
         index += 1;
@@ -978,27 +1053,31 @@ INDEX_HTML = """<!doctype html>
         });
       }
       window.addEventListener("keydown", async (event) => {
-        if (event.key === "1") await labelCurrent("milady");
-        if (event.key === "2") await labelCurrent("not_milady");
-        if (event.key === "3") await labelCurrent("unclear");
-        if (event.key.toLowerCase() === "x") {
-          selectedSha = null;
-          index += 1;
-          await loadItem();
-        }
         if (event.key.toLowerCase() === "z") {
           await undoLast();
-          await loadBatch();
         }
-        if (event.code in numpadIndexMap) {
-          selectedBatchIndex = numpadIndexMap[event.code];
-          cycleBatchLabel(selectedBatchIndex);
+        if (activeView === "individual") {
+          if (event.key === "1") await labelCurrent("milady");
+          if (event.key === "2") await labelCurrent("not_milady");
+          if (event.key === "3") await labelCurrent("unclear");
+          if (event.key.toLowerCase() === "x") {
+            selectedSha = null;
+            index += 1;
+            await loadItem();
+          }
         }
-        if (event.key === "Enter" || event.code === "NumpadEnter") {
-          await commitBatch();
+        if (activeView === "batch") {
+          if (event.code in numpadIndexMap) {
+            selectedBatchIndex = numpadIndexMap[event.code];
+            cycleBatchLabel(selectedBatchIndex);
+          }
+          if (event.key === "Enter" || event.code === "NumpadEnter") {
+            await commitBatch();
+          }
         }
       });
       loadSummary().then(async () => {
+        setActiveView("individual");
         await loadHistory();
         await loadLabeledGrid();
         await loadBatch();
