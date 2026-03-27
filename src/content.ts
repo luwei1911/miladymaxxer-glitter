@@ -35,6 +35,7 @@ import type {
 
 const STYLE_ID = "milady-shrinkifier-style";
 const ARTICLE_SELECTOR = 'article[data-testid="tweet"]';
+const RESCAN_INTERVAL_MS = 1000;
 const cache = new Map<string, Promise<DetectionResult>>();
 const processed = new WeakMap<HTMLElement, string>();
 const placeholders = new WeakMap<HTMLElement, HTMLDivElement>();
@@ -45,6 +46,7 @@ let modelMetadataPromise: Promise<ModelMetadata> | null = null;
 let workerPromise: Promise<Worker> | null = null;
 let pendingWorker = new Map<string, (score: number) => void>();
 let scanScheduled = false;
+let delayedScanTimer: number | null = null;
 let stats: DetectionStats | null = null;
 let matchedAccounts: MatchedAccountMap | null = null;
 let localStateWriteScheduled = false;
@@ -61,12 +63,18 @@ async function boot(): Promise<void> {
   observeStorage();
   const observer = new MutationObserver(() => {
     scheduleProcessVisibleTweets();
+    scheduleDelayedProcessVisibleTweets();
   });
   observer.observe(document.body, {
     childList: true,
     subtree: true,
   });
+  window.addEventListener("scroll", scheduleDelayedProcessVisibleTweets, { passive: true });
+  window.setInterval(() => {
+    scheduleProcessVisibleTweets();
+  }, RESCAN_INTERVAL_MS);
   scheduleProcessVisibleTweets();
+  scheduleDelayedProcessVisibleTweets();
 }
 
 async function processVisibleTweets(): Promise<void> {
@@ -85,47 +93,75 @@ function scheduleProcessVisibleTweets(): void {
   });
 }
 
+function scheduleDelayedProcessVisibleTweets(): void {
+  if (delayedScanTimer !== null) {
+    window.clearTimeout(delayedScanTimer);
+  }
+
+  delayedScanTimer = window.setTimeout(() => {
+    delayedScanTimer = null;
+    scheduleProcessVisibleTweets();
+  }, 350);
+}
+
 async function processTweet(tweet: HTMLElement): Promise<void> {
-  const avatar = findAvatar(tweet);
-  const author = findAuthor(tweet);
-  if (!avatar) {
-    clearEffects(tweet);
-    delete tweet.dataset.miladyShrinkifier;
-    delete tweet.dataset.miladyShrinkifierState;
-    return;
-  }
-
-  if (author && settings.whitelistHandles.includes(author.handle)) {
-    clearEffects(tweet);
-    delete tweet.dataset.miladyShrinkifier;
-    delete tweet.dataset.miladyShrinkifierState;
-    return;
-  }
-
-  const normalizedUrl = normalizeProfileImageUrl(avatar.currentSrc || avatar.src);
-  if (processed.get(tweet) === normalizedUrl && tweet.dataset.miladyShrinkifierState) {
-    applyMode(tweet);
-    return;
-  }
-
-  processed.set(tweet, normalizedUrl);
-  incrementStat("tweetsScanned");
-  const result = await detectAvatar(avatar, normalizedUrl);
-  if (result.matched) {
-    tweet.dataset.miladyShrinkifier = result.source ?? "match";
-    tweet.dataset.miladyShrinkifierState = "match";
-    incrementMatchStats(result);
-    if (author) {
-      recordMatchedAccount(author.handle, author.displayName);
+  try {
+    const avatar = findAvatar(tweet);
+    const author = findAuthor(tweet);
+    if (!avatar) {
+      tweet.dataset.miladyShrinkifierState = "miss";
+      applyMode(tweet);
+      scheduleDelayedProcessVisibleTweets();
+      return;
     }
-    applyMode(tweet);
-    return;
-  }
 
-  clearEffects(tweet);
-  delete tweet.dataset.miladyShrinkifier;
-  tweet.dataset.miladyShrinkifierState = "miss";
-  applyMode(tweet);
+    if (!avatar.currentSrc && !avatar.src) {
+      tweet.dataset.miladyShrinkifierState = "miss";
+      applyMode(tweet);
+      scheduleDelayedProcessVisibleTweets();
+      return;
+    }
+
+    if (author && settings.whitelistHandles.includes(author.handle)) {
+      clearEffects(tweet);
+      delete tweet.dataset.miladyShrinkifier;
+      delete tweet.dataset.miladyShrinkifierState;
+      return;
+    }
+
+    const normalizedUrl = normalizeProfileImageUrl(avatar.currentSrc || avatar.src);
+    if (processed.get(tweet) === normalizedUrl && tweet.dataset.miladyShrinkifierState) {
+      applyMode(tweet);
+      return;
+    }
+
+    tweet.dataset.miladyShrinkifierState = "miss";
+    applyMode(tweet);
+    processed.set(tweet, normalizedUrl);
+    incrementStat("tweetsScanned");
+    const result = await detectAvatar(avatar, normalizedUrl);
+    if (result.matched) {
+      tweet.dataset.miladyShrinkifier = result.source ?? "match";
+      tweet.dataset.miladyShrinkifierState = "match";
+      incrementMatchStats(result);
+      if (author) {
+        recordMatchedAccount(author.handle, author.displayName);
+      }
+      applyMode(tweet);
+      return;
+    }
+
+    clearEffects(tweet);
+    delete tweet.dataset.miladyShrinkifier;
+    tweet.dataset.miladyShrinkifierState = "miss";
+    applyMode(tweet);
+  } catch (error) {
+    console.error("Milady post processing failed", error);
+    clearEffects(tweet);
+    delete tweet.dataset.miladyShrinkifier;
+    tweet.dataset.miladyShrinkifierState = "miss";
+    applyMode(tweet);
+  }
 }
 
 async function detectAvatar(image: HTMLImageElement, normalizedUrl: string): Promise<DetectionResult> {
