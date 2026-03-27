@@ -498,6 +498,7 @@ INDEX_HTML = """<!doctype html>
         const rows = [
           ["sha256", item.sha256],
           ["label", item.label || "unlabeled"],
+          ["labeled at", item.labeledAt || "n/a"],
           ["handles", item.handles.join(", ") || "none"],
           ["display names", item.displayNames.join(", ") || "none"],
           ["seen count", item.seenCount],

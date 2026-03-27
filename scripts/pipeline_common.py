@@ -24,6 +24,10 @@ PUBLIC_METADATA_PATH = Path("public/generated/milady-mobilenetv3-small.meta.json
 OFFICIAL_IMAGE_ROOT = CACHE_ROOT / "milady-maker"
 REVIEW_QUEUES = (
     "unlabeled",
+    "labeled_all",
+    "labeled_milady",
+    "labeled_not_milady",
+    "labeled_unclear",
     "heuristic_matches",
     "whitelisted",
     "high_seen_count",
@@ -55,6 +59,7 @@ class ReviewItem:
     latest_model_predicted_label: str | None
     latest_model_run_id: str | None
     disagreement_flags: list[str]
+    labeled_at: str | None
     example_profile_url: str | None
     example_notification_url: str | None
     example_tweet_url: str | None
@@ -82,6 +87,7 @@ class ReviewItem:
             "latestModelPredictedLabel": self.latest_model_predicted_label,
             "latestModelRunId": self.latest_model_run_id,
             "disagreementFlags": self.disagreement_flags,
+            "labeledAt": self.labeled_at,
             "exampleProfileUrl": self.example_profile_url,
             "exampleNotificationUrl": self.example_notification_url,
             "exampleTweetUrl": self.example_tweet_url,
@@ -404,6 +410,7 @@ def load_review_items(connection: sqlite3.Connection) -> list[ReviewItem]:
                 if image_row["latest_model_run_id"] is not None
                 else None,
                 disagreement_flags=disagreement_flags,
+                labeled_at=str(image_row["labeled_at"]) if image_row["labeled_at"] is not None else None,
                 example_profile_url=example_profile_url,
                 example_notification_url=example_notification_url,
                 example_tweet_url=example_tweet_url,
@@ -419,6 +426,14 @@ def queue_items(items: list[ReviewItem], queue_name: str) -> list[ReviewItem]:
     if queue_name not in REVIEW_QUEUES:
         raise ValueError(f"Unsupported review queue: {queue_name}")
 
+    def labeled_sort_key(item: ReviewItem) -> tuple[int, float, int, str]:
+        return (
+            len(item.disagreement_flags),
+            item.max_model_score if item.max_model_score is not None else -1.0,
+            item.seen_count,
+            item.labeled_at or "",
+        )
+
     if queue_name == "unlabeled":
         filtered = [item for item in items if item.label is None]
         return sorted(
@@ -431,6 +446,18 @@ def queue_items(items: list[ReviewItem], queue_name: str) -> list[ReviewItem]:
             ),
             reverse=True,
         )
+
+    if queue_name == "labeled_all":
+        return sorted((item for item in items if item.label is not None), key=labeled_sort_key, reverse=True)
+
+    if queue_name == "labeled_milady":
+        return sorted((item for item in items if item.label == "milady"), key=labeled_sort_key, reverse=True)
+
+    if queue_name == "labeled_not_milady":
+        return sorted((item for item in items if item.label == "not_milady"), key=labeled_sort_key, reverse=True)
+
+    if queue_name == "labeled_unclear":
+        return sorted((item for item in items if item.label == "unclear"), key=labeled_sort_key, reverse=True)
 
     if queue_name == "heuristic_matches":
         return sorted((item for item in items if item.heuristic_match), key=lambda item: item.seen_count, reverse=True)
