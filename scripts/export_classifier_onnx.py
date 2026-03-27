@@ -56,6 +56,9 @@ def main() -> None:
         training=torch.onnx.TrainingMode.EVAL,
         do_constant_folding=True,
     )
+    stale_external_data = PUBLIC_MODEL_PATH.with_suffix(PUBLIC_MODEL_PATH.suffix + ".data")
+    if stale_external_data.exists():
+        stale_external_data.unlink()
     onnx.checker.check_model(str(PUBLIC_MODEL_PATH))
 
     metadata = {
