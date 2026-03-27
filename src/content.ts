@@ -391,6 +391,7 @@ function replaceXLogo(): void {
         image-rendering: pixelated;
         filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.4));
         border-radius: 6px;
+        transform: translate(10px, 10px);
       `;
 
       homeLink.appendChild(img);
@@ -642,6 +643,41 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
     tweet.dataset.miladymaxxerDebug = "err";
     applyMode(tweet);
   }
+
+  // Also check for quote tweets - if a milady is quoted, style the quote card gold
+  processQuoteTweet(tweet);
+}
+
+// Track processed quote tweets to avoid re-processing
+const processedQuoteTweets = new WeakMap<HTMLElement, string>();
+
+async function processQuoteTweet(tweet: HTMLElement): Promise<void> {
+  const quoteTweet = tweet.querySelector<HTMLElement>('[data-testid="quoteTweet"]');
+  if (!quoteTweet) return;
+
+  // Find avatar in the quote tweet
+  const quoteAvatar = quoteTweet.querySelector<HTMLImageElement>('img[src*="profile_images"]');
+  if (!quoteAvatar?.src) {
+    quoteTweet.dataset.miladymaxxerQuote = "other";
+    return;
+  }
+
+  const normalizedUrl = normalizeProfileImageUrl(quoteAvatar.currentSrc || quoteAvatar.src);
+
+  // Skip if already processed with same avatar
+  if (processedQuoteTweets.get(quoteTweet) === normalizedUrl) return;
+  processedQuoteTweets.set(quoteTweet, normalizedUrl);
+
+  try {
+    const result = await detectAvatar(quoteAvatar, normalizedUrl);
+    if (result.matched) {
+      quoteTweet.dataset.miladymaxxerQuote = "milady";
+    } else {
+      quoteTweet.dataset.miladymaxxerQuote = "other";
+    }
+  } catch {
+    quoteTweet.dataset.miladymaxxerQuote = "other";
+  }
 }
 
 async function processNotificationGroup(notification: HTMLElement): Promise<void> {
@@ -723,10 +759,22 @@ async function detectAvatarUncached(image: HTMLImageElement, normalizedUrl: stri
 }
 
 function findAvatar(tweet: HTMLElement): HTMLImageElement | null {
-  return (
-    tweet.querySelector<HTMLImageElement>('[data-testid="Tweet-User-Avatar"] img[src*="profile_images"]') ??
-    tweet.querySelector<HTMLImageElement>('img[src*="profile_images"]')
-  );
+  // Look for the main avatar image, excluding small badge images
+  const avatarContainer = tweet.querySelector<HTMLElement>('[data-testid="Tweet-User-Avatar"]');
+  if (avatarContainer) {
+    // Get all profile images and pick the largest one (the actual avatar, not badges)
+    const images = Array.from(avatarContainer.querySelectorAll<HTMLImageElement>('img[src*="profile_images"]'));
+    if (images.length > 0) {
+      // Return the largest image (actual avatar is bigger than badge overlays)
+      return images.reduce((largest, img) => {
+        const largestSize = (largest.naturalWidth || largest.width || 0) * (largest.naturalHeight || largest.height || 0);
+        const imgSize = (img.naturalWidth || img.width || 0) * (img.naturalHeight || img.height || 0);
+        return imgSize > largestSize ? img : largest;
+      });
+    }
+  }
+  // Fallback: find any profile image
+  return tweet.querySelector<HTMLImageElement>('img[src*="profile_images"]');
 }
 
 function findAuthor(tweet: HTMLElement): { handle: string; displayName: string | null } | null {
@@ -747,22 +795,22 @@ function findAuthor(tweet: HTMLElement): { handle: string; displayName: string |
 
 // Find previous article sibling - only in actual reply threads
 function findPreviousArticle(tweet: HTMLElement): HTMLElement | null {
-  // Only look at direct container siblings to avoid matching unrelated timeline tweets
   const container = tweet.closest('[data-testid="cellInnerDiv"]');
   if (!container) return null;
+
+  // Check if this tweet is part of a reply thread by looking for the vertical connector line
+  // These lines connect replies to their parent and have specific background colors per theme
+  const avatarArea = container.querySelector('[data-testid="Tweet-User-Avatar"]')?.parentElement?.parentElement;
+  const hasThreadConnector = avatarArea?.querySelector(
+    'div[style*="background-color: rgb(207, 217, 222)"], div[style*="background-color: rgb(56, 68, 77)"], div[style*="background-color: rgb(51, 54, 57)"]'
+  );
+
+  if (!hasThreadConnector) return null;
 
   const prevContainer = container.previousElementSibling;
   if (!prevContainer) return null;
 
-  const prevArticle = prevContainer.querySelector<HTMLElement>('article[data-testid="tweet"]');
-  if (!prevArticle) return null;
-
-  // Only apply fade-in when there's a visible thread connector line
-  // This indicates an actual reply chain, not just adjacent timeline posts
-  const hasThreadLine = container.querySelector('[style*="border-left"], [style*="border-color"]');
-  if (!hasThreadLine) return null;
-
-  return prevArticle;
+  return prevContainer.querySelector<HTMLElement>('article[data-testid="tweet"]');
 }
 
 function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
@@ -796,6 +844,12 @@ function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
         } else {
           delete tweet.dataset.miladymaxxerLiked;
         }
+        // Check if user follows this milady
+        if (doesUserFollow(tweet)) {
+          tweet.dataset.miladymaxxerFollowing = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerFollowing;
+        }
         return;
       }
       tweet.dataset.miladymaxxerEffect = "diminish";
@@ -826,6 +880,7 @@ function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerEffect;
   delete tweet.dataset.miladymaxxerNoLikes;
   delete tweet.dataset.miladymaxxerLiked;
+  delete tweet.dataset.miladymaxxerFollowing;
 }
 
 function hasZeroLikes(tweet: HTMLElement): boolean {
@@ -849,6 +904,37 @@ function hasZeroLikes(tweet: HTMLElement): boolean {
 function hasUserLiked(tweet: HTMLElement): boolean {
   // If unlike button exists, user has liked this post
   return !!tweet.querySelector<HTMLElement>('[data-testid="unlike"]');
+}
+
+function doesUserFollow(tweet: HTMLElement): boolean {
+  // Check for unfollow button - if it exists, user definitely follows them
+  const unfollowButton = tweet.querySelector<HTMLElement>('[data-testid$="-unfollow"]');
+  if (unfollowButton) {
+    return true;
+  }
+
+  // Check for "Following" in any button aria-label
+  const followingButton = tweet.querySelector<HTMLElement>('[aria-label*="Following"]');
+  if (followingButton) {
+    return true;
+  }
+
+  // Check for Follow button with specific aria-label pattern
+  const followButton = tweet.querySelector<HTMLElement>('[data-testid$="-follow"]');
+  if (followButton) {
+    const ariaLabel = followButton.getAttribute("aria-label") || "";
+    // "Follow @username" means NOT following
+    if (ariaLabel.startsWith("Follow @")) {
+      return false;
+    }
+    // "Following @username" means following
+    if (ariaLabel.startsWith("Following")) {
+      return true;
+    }
+  }
+
+  // Default: assume following to avoid false underlines
+  return true;
 }
 
 function applyDebugState(tweet: HTMLElement): void {
@@ -1008,23 +1094,31 @@ function injectStyles(): void {
         inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
     }
 
-    /* Light grey underline on handle for miladys you don't follow */
-    [data-miladymaxxer-effect="milady"]:has([aria-label*="Follow"]) [data-testid="User-Name"] > div > div > a span:first-of-type {
-      text-decoration: underline !important;
-      text-decoration-color: rgba(120, 120, 120, 0.6) !important;
-      text-underline-offset: 3px !important;
-      text-decoration-thickness: 1px !important;
+    /* Dotted grey underline on display name for miladys you don't follow */
+    [data-miladymaxxer-effect="milady"]:not([data-miladymaxxer-following="true"]) [data-testid="User-Name"] a[role="link"]:first-of-type {
+      text-decoration: underline dotted !important;
+      text-decoration-color: rgba(140, 140, 140, 0.7) !important;
+      text-underline-offset: 2px !important;
+      text-decoration-thickness: 1.5px !important;
     }
 
-    /* Faded pink heart on milady posts to encourage liking */
+    /* Faded pink heart and count on milady posts to encourage liking */
     [data-miladymaxxer-effect="milady"] [data-testid="like"] svg {
       color: rgba(249, 24, 128, 0.4) !important;
       transition: color 0.2s ease, transform 0.2s ease !important;
     }
 
+    [data-miladymaxxer-effect="milady"] [data-testid="like"] span {
+      color: rgba(249, 24, 128, 0.5) !important;
+    }
+
     [data-miladymaxxer-effect="milady"] [data-testid="like"]:hover svg {
       color: rgba(249, 24, 128, 0.7) !important;
       transform: scale(1.1) !important;
+    }
+
+    [data-miladymaxxer-effect="milady"] [data-testid="like"]:hover span {
+      color: rgba(249, 24, 128, 0.7) !important;
     }
 
     /* Silver metallic for milady posts with 0 likes */
@@ -1140,49 +1234,49 @@ function injectStyles(): void {
         ) !important;
     }
 
-    /* Enhanced gold for posts user has liked - 8% more gold */
+    /* Enhanced gold for posts user has liked - 20% more gold */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      border-color: rgba(212, 175, 55, 0.4) !important;
+      border-color: rgba(212, 175, 55, 0.5) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.06),
-        0 4px 14px rgba(212, 175, 55, 0.15),
-        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
+        0 2px 6px rgba(184, 134, 11, 0.12),
+        0 4px 18px rgba(212, 175, 55, 0.2),
+        inset 0 1px 0 rgba(255, 215, 0, 0.25) !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]::before {
       background:
         linear-gradient(
           135deg,
-          rgba(212, 175, 55, 0.16) 0%,
-          rgba(255, 223, 100, 0.24) 15%,
+          rgba(212, 175, 55, 0.22) 0%,
+          rgba(255, 223, 100, 0.32) 15%,
           rgba(255, 255, 255, 0) 40%,
-          rgba(212, 175, 55, 0.08) 65%,
-          rgba(255, 215, 0, 0.2) 85%,
-          rgba(184, 134, 11, 0.12) 100%
+          rgba(212, 175, 55, 0.12) 65%,
+          rgba(255, 215, 0, 0.28) 85%,
+          rgba(184, 134, 11, 0.18) 100%
         ) !important;
     }
 
     /* Light mode liked */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgba(255, 248, 225, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      background: linear-gradient(180deg, rgba(255, 243, 205, 1) 0%, rgba(255, 253, 245, 1) 100%) !important;
       box-shadow:
-        0 2px 4px rgba(184, 134, 11, 0.1),
-        0 4px 14px rgba(212, 175, 55, 0.15),
-        inset 0 1px 0 rgba(255, 223, 100, 0.35) !important;
+        0 2px 6px rgba(184, 134, 11, 0.15),
+        0 4px 18px rgba(212, 175, 55, 0.2),
+        inset 0 1px 0 rgba(255, 223, 100, 0.5) !important;
     }
 
     /* Dark mode liked */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgba(65, 52, 28, 1) 0%, rgba(50, 40, 20, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.45) !important;
+      background: linear-gradient(180deg, rgba(75, 60, 30, 1) 0%, rgba(58, 46, 22, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.55) !important;
     }
 
     /* Dim mode liked */
     html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgba(60, 50, 32, 1) 0%, rgba(48, 40, 25, 1) 100%) !important;
+      background: linear-gradient(180deg, rgba(70, 58, 35, 1) 0%, rgba(55, 45, 28, 1) 100%) !important;
       border-color: rgba(212, 175, 55, 0.45) !important;
     }
 
@@ -1392,6 +1486,78 @@ function injectStyles(): void {
       border-color: rgb(56, 68, 77) !important;
     }
 
+    /* ===== MILADY QUOTE TWEETS - Gold styling when a milady is quoted ===== */
+    [data-miladymaxxer-quote="milady"] {
+      background: linear-gradient(180deg, rgba(255, 240, 190, 0.95) 0%, rgba(255, 250, 235, 0.95) 100%) !important;
+      border: 1.5px solid rgba(212, 175, 55, 0.5) !important;
+      border-radius: 16px !important;
+      box-shadow:
+        0 2px 8px rgba(184, 134, 11, 0.15),
+        inset 0 1px 0 rgba(255, 255, 255, 0.6) !important;
+      position: relative !important;
+      overflow: hidden !important;
+    }
+
+    /* Gold sheen on milady quote */
+    [data-miladymaxxer-quote="milady"]::before {
+      content: "" !important;
+      position: absolute !important;
+      inset: 0 !important;
+      background: linear-gradient(
+        135deg,
+        rgba(255, 248, 220, 0.4) 0%,
+        transparent 50%,
+        rgba(255, 248, 220, 0.2) 100%
+      ) !important;
+      pointer-events: none !important;
+      z-index: 1 !important;
+    }
+
+    /* Dark mode milady quote tweets */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-quote="milady"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-quote="milady"] {
+      background: linear-gradient(180deg, rgba(60, 48, 25, 0.95) 0%, rgba(45, 36, 20, 0.95) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.4) !important;
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        inset 0 1px 0 rgba(212, 175, 55, 0.15) !important;
+    }
+
+    /* Dim mode milady quote tweets */
+    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-quote="milady"],
+    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-quote="milady"] {
+      background: linear-gradient(180deg, rgba(55, 45, 25, 0.95) 0%, rgba(40, 35, 22, 0.95) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.35) !important;
+      box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(212, 175, 55, 0.12) !important;
+    }
+
+    /* ===== NON-MILADY QUOTE TWEETS - Neutral styling, no gold ===== */
+    [data-miladymaxxer-quote="other"] {
+      background: rgb(247, 249, 249) !important;
+      border: 1px solid rgb(207, 217, 222) !important;
+      border-radius: 16px !important;
+      box-shadow: none !important;
+      position: relative !important;
+      z-index: 3 !important;
+      isolation: isolate !important;
+    }
+
+    /* Dark mode non-milady quote tweets */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-quote="other"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-quote="other"] {
+      background: rgb(22, 24, 28) !important;
+      border-color: rgb(51, 54, 57) !important;
+    }
+
+    /* Dim mode non-milady quote tweets */
+    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-quote="other"],
+    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-quote="other"] {
+      background: rgb(30, 39, 50) !important;
+      border-color: rgb(56, 68, 77) !important;
+    }
+
     /* Card wrappers inside milady posts */
     [data-miladymaxxer-effect="milady"] [data-testid="card.wrapper"] {
       position: relative !important;
@@ -1487,53 +1653,55 @@ function injectStyles(): void {
         inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
     }
 
-    /* Twitter Dim mode (dark blue) - warm gold accent */
+    /* Twitter Dim mode (dark blue) - same gold as light mode */
     html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgba(55, 46, 30, 1) 0%, rgba(42, 35, 22, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.35) !important;
+      background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.3) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.15),
+        0 2px 4px rgba(184, 134, 11, 0.08),
         0 4px 12px rgba(212, 175, 55, 0.12),
-        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
+        inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
     }
 
-    /* Twitter Dark mode (black) - warm gold accent */
+    /* Twitter Dark mode (black) - same gold as light mode */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgba(60, 48, 25, 1) 0%, rgba(45, 36, 18, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.35) !important;
+      background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.3) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.2),
-        0 4px 12px rgba(212, 175, 55, 0.1),
-        inset 0 1px 0 rgba(255, 215, 0, 0.12) !important;
+        0 2px 4px rgba(184, 134, 11, 0.08),
+        0 4px 12px rgba(212, 175, 55, 0.12),
+        inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
     }
 
-    /* Gold metallic sheen - dim mode */
+    /* Gold metallic sheen - dim mode (same as light) */
     html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"]::before,
     body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"]::before {
       background:
         linear-gradient(
           135deg,
-          rgba(255, 215, 0, 0.25) 0%,
-          rgba(212, 175, 55, 0.12) 25%,
-          rgba(255, 255, 255, 0.02) 50%,
-          rgba(212, 175, 55, 0.1) 75%,
-          rgba(255, 215, 0, 0.22) 100%
+          rgba(255, 248, 220, 0.6) 0%,
+          rgba(255, 223, 100, 0.15) 25%,
+          rgba(255, 255, 255, 0) 40%,
+          rgba(212, 175, 55, 0.05) 65%,
+          rgba(255, 215, 0, 0.15) 85%,
+          rgba(184, 134, 11, 0.08) 100%
         ) !important;
     }
 
-    /* Gold metallic sheen - dark mode */
+    /* Gold metallic sheen - dark mode (same as light) */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::before,
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::before {
       background:
         linear-gradient(
           135deg,
-          rgba(255, 215, 0, 0.22) 0%,
-          rgba(212, 175, 55, 0.1) 25%,
-          rgba(255, 255, 255, 0.02) 50%,
-          rgba(212, 175, 55, 0.08) 75%,
-          rgba(255, 215, 0, 0.2) 100%
+          rgba(255, 248, 220, 0.6) 0%,
+          rgba(255, 223, 100, 0.15) 25%,
+          rgba(255, 255, 255, 0) 40%,
+          rgba(212, 175, 55, 0.05) 65%,
+          rgba(255, 215, 0, 0.15) 85%,
+          rgba(184, 134, 11, 0.08) 100%
         ) !important;
     }
 
@@ -2079,7 +2247,15 @@ function collectNotificationAvatarEntries(notification: HTMLElement): Array<{
   for (const container of Array.from(notification.querySelectorAll<HTMLElement>('[data-testid^="UserAvatar-Container-"]'))) {
     const testId = container.dataset.testid ?? "";
     const handle = normalizeHandle(testId.replace(/^UserAvatar-Container-/, ""));
-    const image = container.querySelector<HTMLImageElement>('img[src*="profile_images"]');
+    // Get all profile images and pick the largest one (skip badge overlays)
+    const images = Array.from(container.querySelectorAll<HTMLImageElement>('img[src*="profile_images"]'));
+    const image = images.length > 0
+      ? images.reduce((largest, img) => {
+          const largestSize = (largest.naturalWidth || largest.width || 0) * (largest.naturalHeight || largest.height || 0);
+          const imgSize = (img.naturalWidth || img.width || 0) * (img.naturalHeight || img.height || 0);
+          return imgSize > largestSize ? img : largest;
+        })
+      : null;
     const source = image?.currentSrc || image?.src;
     if (!handle || !source) {
       continue;
