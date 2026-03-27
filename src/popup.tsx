@@ -38,19 +38,46 @@ const MODE_OPTIONS: Array<{ value: FilterMode; label: string; note: string }> = 
 
 const styles = `
   :root {
-    color-scheme: dark;
+    color-scheme: light dark;
     --bg-0: #0a0a0c;
-    --bg-1: #12111a;
-    --bg-2: #1a1820;
-    --line: rgba(212, 175, 55, 0.15);
-    --line-strong: rgba(212, 175, 55, 0.25);
-    --text: #f7f1e8;
-    --text-soft: rgba(247, 241, 232, 0.72);
-    --text-faint: rgba(247, 241, 232, 0.52);
+    --bg-1: #141418;
+    --bg-2: #1c1c22;
+    --bg-card: rgba(255, 255, 255, 0.03);
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.12);
+    --text: #f5f5f7;
+    --text-soft: rgba(245, 245, 247, 0.65);
+    --text-faint: rgba(245, 245, 247, 0.45);
     --accent: #d4af37;
-    --accent-bright: #ffd700;
-    --accent-soft: rgba(212, 175, 55, 0.2);
-    --good: #d4af37;
+    --accent-bright: #f0c850;
+    --accent-soft: rgba(212, 175, 55, 0.15);
+    --good: #34c759;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg-0: #ffffff;
+      --bg-1: #fafafa;
+      --bg-2: #f5f5f5;
+      --bg-card: rgba(0, 0, 0, 0.02);
+      --line: rgba(0, 0, 0, 0.06);
+      --line-strong: rgba(0, 0, 0, 0.1);
+      --text: #1a1a1a;
+      --text-soft: rgba(26, 26, 26, 0.65);
+      --text-faint: rgba(26, 26, 26, 0.45);
+      --accent: #b8960c;
+      --accent-bright: #d4af37;
+      --accent-soft: rgba(212, 175, 55, 0.12);
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+    }
   }
 
   * {
@@ -62,28 +89,29 @@ const styles = `
     min-width: 320px;
     background: var(--bg-0);
     color: var(--text);
-    font-family: "Avenir Next", "Segoe UI", sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
   }
 
-  /* Custom scrollbar - gold metallic */
+  /* Linear-style scrollbar */
   ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
   }
 
   ::-webkit-scrollbar-track {
-    background: rgba(212, 175, 55, 0.05);
-    border-radius: 4px;
+    background: transparent;
   }
 
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, rgba(212, 175, 55, 0.4) 0%, rgba(184, 134, 11, 0.4) 100%);
-    border-radius: 4px;
-    border: 1px solid rgba(255, 215, 0, 0.2);
+    background: var(--line-strong);
+    border-radius: 3px;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, rgba(212, 175, 55, 0.6) 0%, rgba(184, 134, 11, 0.6) 100%);
+    background: var(--text-faint);
   }
 
   button,
@@ -91,54 +119,47 @@ const styles = `
     font: inherit;
   }
 
-  @keyframes gold-shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-
   .popup {
     position: relative;
-    width: 320px;
-    height: 460px;
+    width: 340px;
+    height: 480px;
     display: flex;
     flex-direction: column;
-    padding: 18px 16px 14px;
-    background:
-      radial-gradient(200px 150px at top left, rgba(255, 215, 0, 0.08), transparent 60%),
-      radial-gradient(180px 180px at bottom right, rgba(212, 175, 55, 0.06), transparent 50%),
-      linear-gradient(180deg, var(--bg-1) 0px, var(--bg-0) 320px);
-    background-repeat: no-repeat;
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    box-shadow:
-      0 0 1px rgba(255, 215, 0, 0.3),
-      0 0 20px rgba(212, 175, 55, 0.1),
-      inset 0 1px 0 rgba(255, 215, 0, 0.1);
+    padding: 20px;
+    background: var(--bg-0);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg), 0 0 0 1px var(--line);
+    overflow: hidden;
   }
 
   .popup::before {
     content: "";
     position: absolute;
     top: 0;
-    left: 0;
-    right: 0;
+    left: 20px;
+    right: 20px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.5), transparent);
+    background: linear-gradient(90deg, transparent, var(--accent-soft), transparent);
+    opacity: 0.5;
   }
 
   .header {
-    margin-bottom: 16px;
+    margin-bottom: 20px;
   }
 
   h1 {
     margin: 0;
-    font-size: 20px;
-    font-weight: 680;
+    font-size: 17px;
+    font-weight: 600;
     letter-spacing: -0.02em;
-    background: linear-gradient(135deg, #ffd700 0%, #d4af37 50%, #b8860b 100%);
+    color: var(--text);
+  }
+
+  h1 span {
+    background: linear-gradient(135deg, var(--accent-bright) 0%, var(--accent) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    text-shadow: 0 0 30px rgba(212, 175, 55, 0.3);
   }
 
   .lede,
@@ -146,7 +167,7 @@ const styles = `
   .section-note,
   .empty {
     margin: 0;
-    color: var(--text-soft);
+    color: var(--text-faint);
     font-size: 12px;
     line-height: 1.5;
   }
@@ -154,12 +175,12 @@ const styles = `
   .tabs {
     display: flex;
     align-items: center;
-    gap: 14px;
-    margin: 0 0 14px;
-    padding-bottom: 1px;
-    border-bottom: 1px solid var(--line);
-    overflow-x: auto;
-    scrollbar-width: none;
+    gap: 4px;
+    margin: 0 0 16px;
+    padding: 3px;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
   }
 
   .tabs::-webkit-scrollbar {
@@ -168,33 +189,28 @@ const styles = `
 
   .tab {
     position: relative;
+    flex: 1;
     border: 0;
     background: transparent;
     color: var(--text-soft);
-    padding: 0 0 10px;
+    padding: 8px 12px;
     font-size: 12px;
+    font-weight: 500;
     white-space: nowrap;
     cursor: pointer;
-    transition: color 120ms ease;
+    border-radius: var(--radius-sm);
+    transition: all 150ms ease;
+  }
+
+  .tab:hover {
+    color: var(--text);
+    background: var(--bg-card);
   }
 
   .tab[data-active="true"] {
     color: var(--text);
-  }
-
-  .tab::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -1px;
-    height: 2px;
-    background: transparent;
-  }
-
-  .tab[data-active="true"]::after {
-    background: linear-gradient(90deg, var(--accent), var(--accent-bright));
-    box-shadow: 0 0 8px rgba(212, 175, 55, 0.5);
+    background: var(--bg-2);
+    box-shadow: var(--shadow-sm);
   }
 
   .panel {
