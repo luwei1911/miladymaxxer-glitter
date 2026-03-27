@@ -14,11 +14,6 @@
 - [ ] Add confidence threshold tuning to popup settings
 - [ ] Explore larger model (MobileNetV3-Large) for accuracy gains
 
-## Features
-
-- [ ] DM sound effects: react emoji, receive react, send message (active DM window only)
-- [ ] Sound on hover over GC conversations in list
-
 ## Testing
 
-- [ ] E2E test with Playwright on a mock X/Twitter page
+- [ ] E2E tests with Playwright (infrastructure ready, needs @playwright/test)
