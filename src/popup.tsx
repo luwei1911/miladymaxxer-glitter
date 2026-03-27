@@ -71,7 +71,10 @@ const styles = `
   }
 
   .popup {
-    min-height: 100vh;
+    width: 320px;
+    height: 460px;
+    display: flex;
+    flex-direction: column;
     padding: 18px 16px 14px;
     background:
       radial-gradient(240px 180px at top right, rgba(255, 109, 74, 0.18), transparent 70%),
@@ -146,7 +149,11 @@ const styles = `
   }
 
   .panel {
-    min-height: 292px;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
     padding-top: 14px;
   }
 
@@ -175,7 +182,8 @@ const styles = `
   .panel-actions-bottom {
     display: flex;
     justify-content: flex-end;
-    margin-top: 14px;
+    margin-top: auto;
+    padding-top: 20px;
   }
 
   .action-button {
