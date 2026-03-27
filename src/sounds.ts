@@ -7,9 +7,7 @@ import {
   DM_CONVERSATION_PANEL,
   DM_MESSAGE_LIST,
   DM_MESSAGE,
-  DM_COMPOSER,
   DM_COMPOSER_FORM,
-  DM_REACTIONS,
   LAYERS,
 } from "./selectors";
 import type { ExtensionSettings } from "./shared/types";
@@ -25,7 +23,6 @@ let audioContext: AudioContext | null = null;
 const soundsAttached = new WeakSet<HTMLElement>();
 let dmListenersAttached = false;
 let lastMessageCount = 0;
-let lastReactionCount = 0;
 
 // Polyphonic sound system using Web Audio API
 // AudioContext is created lazily on first sound (which is always triggered by user gesture)
@@ -113,12 +110,12 @@ function playClickSound(isMilady: boolean): void {
 
 function playSendSound(): void {
   if (!settings.soundEnabled) return;
-  // Ascending triumphant chime - like sending a message into the world
-  playTone(523.25, 0.15, "sine", 0.07); // C5
-  setTimeout(() => playTone(659.25, 0.15, "sine", 0.07), 60); // E5
-  setTimeout(() => playTone(783.99, 0.15, "sine", 0.07), 120); // G5
-  setTimeout(() => playTone(1046.5, 0.25, "sine", 0.08), 180); // C6 - hold longer
-  setTimeout(() => playChord([1318.5, 1568], 0.2, 0.04), 250); // E6 + G6 sparkle
+  // Quick ascending chime
+  playTone(523.25, 0.08, "sine", 0.07); // C5
+  setTimeout(() => playTone(659.25, 0.08, "sine", 0.07), 30); // E5
+  setTimeout(() => playTone(783.99, 0.08, "sine", 0.07), 60); // G5
+  setTimeout(() => playTone(1046.5, 0.12, "sine", 0.08), 90); // C6
+  setTimeout(() => playChord([1318.5, 1568], 0.1, 0.04), 120); // E6 + G6 sparkle
 }
 
 function playMessageBlip(): void {
@@ -261,7 +258,15 @@ export function attachDMSounds(): void {
       }
     }
 
-    // Check for DM conversation panel click
+    // Check for DM conversation panel click (skip if clicking a reaction/emoji button)
+    if (button) {
+      const ariaLabel = button.getAttribute("aria-label") || "";
+      // Skip reaction opener buttons (emoji, heart, etc.)
+      if (/react|emoji|like/i.test(ariaLabel) ||
+          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u.test(ariaLabel)) {
+        return;
+      }
+    }
     const dmPanel = target.closest(DM_CONVERSATION_PANEL) || target.closest(DM_CONTAINER);
     if (dmPanel && window.location.pathname.includes("/messages")) {
       playClickSound(false);
@@ -310,35 +315,50 @@ export function attachDMSounds(): void {
 
 
 // Observe incoming messages and reactions in DMs/GCs
+let dmObserver: MutationObserver | null = null;
+let observedMessageList: Element | null = null;
+
 export function observeIncomingMessages(): void {
-  // Find the message list in the active conversation
   const messageList = document.querySelector(DM_MESSAGE_LIST) ||
                       document.querySelector(DM_CONVERSATION_PANEL);
 
   if (!messageList) {
+    // Left the DM view — tear down observer
+    if (dmObserver) {
+      dmObserver.disconnect();
+      dmObserver = null;
+      observedMessageList = null;
+    }
     lastMessageCount = 0;
-    lastReactionCount = 0;
     return;
   }
 
-  // Count messages (each message has data-testid="message-{uuid}")
-  const messages = messageList.querySelectorAll(DM_MESSAGE);
-  const currentCount = messages.length;
+  // Already observing this list
+  if (observedMessageList === messageList) return;
 
-  // Count reactions (emoji reactions on messages)
-  const reactions = messageList.querySelectorAll(DM_REACTIONS);
-  const currentReactionCount = reactions.length;
-
-  // Play sound for new messages (only after initial count is established)
-  if (currentCount > lastMessageCount && lastMessageCount > 0 && document.hasFocus()) {
-    playMessageBlip();
+  // New conversation opened — set baseline count and attach observer
+  if (dmObserver) {
+    dmObserver.disconnect();
   }
+  observedMessageList = messageList;
+  lastMessageCount = messageList.querySelectorAll(DM_MESSAGE).length;
 
-  // Play sound for new reactions
-  if (currentReactionCount > lastReactionCount && lastReactionCount > 0 && document.hasFocus()) {
-    playReactionSound();
-  }
+  dmObserver = new MutationObserver(() => {
+    if (!settings.soundEnabled || settings.mode === "off") return;
+    if (!document.hasFocus()) return;
 
-  lastMessageCount = currentCount;
-  lastReactionCount = currentReactionCount;
+    const currentCount = messageList.querySelectorAll(DM_MESSAGE).length;
+
+    if (currentCount > lastMessageCount && lastMessageCount > 0) {
+      // New message(s) appeared — could be incoming or a reaction badge
+      playMessageBlip();
+    }
+
+    lastMessageCount = currentCount;
+  });
+
+  dmObserver.observe(messageList, {
+    childList: true,
+    subtree: true,
+  });
 }
