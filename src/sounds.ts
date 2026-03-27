@@ -22,7 +22,6 @@ export function setSoundSettings(next: ExtensionSettings): void {
 let audioContext: AudioContext | null = null;
 const soundsAttached = new WeakSet<HTMLElement>();
 let dmListenersAttached = false;
-let lastMessageCount = 0;
 
 // AudioContext can only be created/resumed after a real user gesture (click/keydown).
 // Hover events don't qualify, so pass hoverOnly=true to silently skip.
@@ -308,19 +307,24 @@ export function observeIncomingMessages(): void {
       dmObserver = null;
       observedMessageList = null;
     }
-    lastMessageCount = 0;
     return;
   }
 
-  // Already observing this list
-  if (observedMessageList === messageList) return;
+  // Already observing this exact element and it's still in the DOM
+  if (observedMessageList === messageList && observedMessageList.isConnected) return;
 
-  // New conversation opened — set baseline count and attach observer
+  // Tear down stale observer
   if (dmObserver) {
     dmObserver.disconnect();
   }
   observedMessageList = messageList;
-  lastMessageCount = messageList.querySelectorAll(DM_MESSAGE).length;
+
+  // Track seen message UUIDs (Twitter virtualizes the DOM so counting nodes is unreliable)
+  const seenMessageIds = new Set<string>();
+  for (const msg of Array.from(messageList.querySelectorAll(DM_MESSAGE))) {
+    const id = msg.getAttribute("data-testid");
+    if (id) seenMessageIds.add(id);
+  }
 
   let dmMutationTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -331,13 +335,18 @@ export function observeIncomingMessages(): void {
       if (!settings.soundEnabled || settings.mode === "off") return;
       if (!document.hasFocus()) return;
 
-      const currentCount = messageList.querySelectorAll(DM_MESSAGE).length;
-
-      if (currentCount > lastMessageCount) {
-        playMessageBlip();
+      let hasNew = false;
+      for (const msg of Array.from(messageList.querySelectorAll(DM_MESSAGE))) {
+        const id = msg.getAttribute("data-testid");
+        if (id && !seenMessageIds.has(id)) {
+          seenMessageIds.add(id);
+          hasNew = true;
+        }
       }
 
-      lastMessageCount = currentCount;
+      if (hasNew) {
+        playMessageBlip();
+      }
     }, 100);
   });
 
