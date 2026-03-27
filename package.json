@@ -8,6 +8,7 @@
     "build:app": "vite build",
     "build:worker": "esbuild src/worker.ts --bundle --format=iife --platform=browser --target=es2022 --sourcemap --outfile=dist/worker.js",
     "build:content": "esbuild src/content.ts --bundle --format=iife --platform=browser --target=es2022 --sourcemap --outfile=dist/content.js",
+    "check:pfp": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/check_pfp_url.py \"$@\"' --",
     "dev": "vite build --watch",
     "download:images": "tsx scripts/download-images.ts",
     "download:images:aria2": "zsh scripts/download-images-aria2.sh",
