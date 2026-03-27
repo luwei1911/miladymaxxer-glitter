@@ -32,9 +32,10 @@ import type {
   WorkerResponse,
 } from "./shared/types";
 
-const STYLE_ID = "milady-shrinkifier-style";
+const STYLE_ID = "miladymaxxer-style";
 const ARTICLE_SELECTOR = 'article[data-testid="tweet"]';
 const NOTIFICATION_SELECTOR = 'article[data-testid="notification"]';
+const USER_CELL_SELECTOR = '[data-testid="UserCell"], [data-testid="user-cell"]';
 const RESCAN_INTERVAL_MS = 1000;
 const cache = new Map<string, Promise<DetectionResult>>();
 const processed = new WeakMap<HTMLElement, string>();
@@ -166,7 +167,7 @@ function attachSoundEvents(tweet: HTMLElement): void {
   if (soundsAttached.has(tweet)) return;
   soundsAttached.add(tweet);
 
-  const isMilady = () => tweet.dataset.miladyShrinkifierEffect === "milady";
+  const isMilady = () => tweet.dataset.miladymaxxerEffect === "milady";
 
   tweet.addEventListener("mouseenter", () => {
     if (settings.mode !== "off") {
@@ -395,15 +396,17 @@ function replaceXLogo(): void {
     const homeLink = document.querySelector<HTMLAnchorElement>('h1 a[href="/home"]');
 
     if (homeLink && !homeLink.querySelector(".milady-logo-replacement")) {
-      // Hide all SVGs in this link
-      homeLink.querySelectorAll("svg").forEach(s => (s as HTMLElement).style.display = "none");
+      // Hide all existing children (SVGs, divs, etc.)
+      Array.from(homeLink.children).forEach(child => {
+        (child as HTMLElement).style.display = "none";
+      });
 
       const img = document.createElement("img");
       img.src = logoUrl;
       img.className = "milady-logo-replacement";
       img.style.cssText = `
-        width: 28px;
-        height: 28px;
+        width: 30px;
+        height: 30px;
         object-fit: contain;
         image-rendering: pixelated;
         filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.4));
@@ -464,10 +467,37 @@ async function boot(): Promise<void> {
 async function processVisibleTweets(): Promise<void> {
   const tweets = Array.from(document.querySelectorAll<HTMLElement>(ARTICLE_SELECTOR));
   const notifications = Array.from(document.querySelectorAll<HTMLElement>(NOTIFICATION_SELECTOR));
+  const userCells = Array.from(document.querySelectorAll<HTMLElement>(USER_CELL_SELECTOR));
   await Promise.allSettled([
     ...tweets.map((tweet) => processTweet(tweet)),
     ...notifications.map((notification) => processNotificationGroup(notification)),
+    ...userCells.map((cell) => processUserCell(cell)),
   ]);
+}
+
+// Process user cells (Who to follow, search results, etc.)
+async function processUserCell(cell: HTMLElement): Promise<void> {
+  if (settings.mode === "off") return;
+
+  const avatar = cell.querySelector<HTMLImageElement>('img[src*="profile_images"]');
+  if (!avatar?.src) return;
+
+  const normalizedUrl = normalizeProfileImageUrl(avatar.src);
+
+  // Skip if already processed with same avatar
+  if (processed.get(cell) === normalizedUrl) return;
+  processed.set(cell, normalizedUrl);
+
+  try {
+    const result = await detectAvatar(avatar, normalizedUrl);
+    if (result.matched) {
+      cell.dataset.miladymaxxerEffect = "milady";
+    } else {
+      delete cell.dataset.miladymaxxerEffect;
+    }
+  } catch {
+    delete cell.dataset.miladymaxxerEffect;
+  }
 }
 
 function scheduleProcessVisibleTweets(): void {
@@ -497,16 +527,16 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
     const avatar = findAvatar(tweet);
     const author = findAuthor(tweet);
     if (!avatar) {
-      tweet.dataset.miladyShrinkifierState = "miss";
-      delete tweet.dataset.miladyShrinkifierDebug;
+      tweet.dataset.miladymaxxerState = "miss";
+      delete tweet.dataset.miladymaxxerDebug;
       applyMode(tweet);
       scheduleDelayedProcessVisibleTweets();
       return;
     }
 
     if (!avatar.currentSrc && !avatar.src) {
-      tweet.dataset.miladyShrinkifierState = "miss";
-      delete tweet.dataset.miladyShrinkifierDebug;
+      tweet.dataset.miladymaxxerState = "miss";
+      delete tweet.dataset.miladymaxxerDebug;
       applyMode(tweet);
       scheduleDelayedProcessVisibleTweets();
       return;
@@ -517,7 +547,7 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
       revealed.delete(tweet);
     }
 
-    if (processed.get(tweet) === normalizedUrl && tweet.dataset.miladyShrinkifierState) {
+    if (processed.get(tweet) === normalizedUrl && tweet.dataset.miladymaxxerState) {
       applyMode(tweet, normalizedUrl);
       return;
     }
@@ -536,20 +566,20 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
       });
       revealed.delete(tweet);
       clearEffects(tweet);
-      delete tweet.dataset.miladyShrinkifier;
-      delete tweet.dataset.miladyShrinkifierState;
+      delete tweet.dataset.miladymaxxer;
+      delete tweet.dataset.miladymaxxerState;
       return;
     }
 
-    tweet.dataset.miladyShrinkifierState = "miss";
-    tweet.dataset.miladyShrinkifierDebug = "…";
+    tweet.dataset.miladymaxxerState = "miss";
+    tweet.dataset.miladymaxxerDebug = "…";
     applyMode(tweet, normalizedUrl);
     incrementStat("tweetsScanned");
     const result = await detectAvatar(avatar, normalizedUrl);
     if (result.debugLabel) {
-      tweet.dataset.miladyShrinkifierDebug = result.debugLabel;
+      tweet.dataset.miladymaxxerDebug = result.debugLabel;
     } else {
-      delete tweet.dataset.miladyShrinkifierDebug;
+      delete tweet.dataset.miladymaxxerDebug;
     }
     recordCollectedAvatar({
       normalizedUrl,
@@ -562,8 +592,8 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
       result,
     });
     if (result.matched) {
-      tweet.dataset.miladyShrinkifier = result.source ?? "match";
-      tweet.dataset.miladyShrinkifierState = "match";
+      tweet.dataset.miladymaxxer = result.source ?? "match";
+      tweet.dataset.miladymaxxerState = "match";
       incrementMatchStats(result);
       if (author) {
         recordMatchedAccount(author.handle, author.displayName);
@@ -574,18 +604,18 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
 
     revealed.delete(tweet);
     clearEffects(tweet);
-    delete tweet.dataset.miladyShrinkifier;
-    tweet.dataset.miladyShrinkifierState = "miss";
+    delete tweet.dataset.miladymaxxer;
+    tweet.dataset.miladymaxxerState = "miss";
     if (result.debugLabel) {
-      tweet.dataset.miladyShrinkifierDebug = result.debugLabel;
+      tweet.dataset.miladymaxxerDebug = result.debugLabel;
     }
     applyMode(tweet, normalizedUrl);
   } catch (error) {
     console.error("Milady post processing failed", error);
     clearEffects(tweet);
-    delete tweet.dataset.miladyShrinkifier;
-    tweet.dataset.miladyShrinkifierState = "miss";
-    tweet.dataset.miladyShrinkifierDebug = "err";
+    delete tweet.dataset.miladymaxxer;
+    tweet.dataset.miladymaxxerState = "miss";
+    tweet.dataset.miladymaxxerDebug = "err";
     applyMode(tweet);
   }
 }
@@ -691,31 +721,30 @@ function findAuthor(tweet: HTMLElement): { handle: string; displayName: string |
   };
 }
 
-// Find previous article sibling (may not be direct sibling due to Twitter's DOM)
+// Find previous article sibling - only in actual reply threads
 function findPreviousArticle(tweet: HTMLElement): HTMLElement | null {
-  // Walk up to find common parent, then find previous article
-  let current: Element | null = tweet;
-  while (current) {
-    const prev = current.previousElementSibling;
-    if (prev) {
-      // Check if it's an article or contains one
-      if (prev.matches('article[data-testid="tweet"]')) {
-        return prev as HTMLElement;
-      }
-      const article = prev.querySelector<HTMLElement>('article[data-testid="tweet"]');
-      if (article) return article;
-    }
-    current = current.parentElement;
-    // Don't go too far up
-    if (current?.matches('[data-testid="primaryColumn"], main, body')) break;
-  }
-  return null;
+  // Only look at direct container siblings to avoid matching unrelated timeline tweets
+  const container = tweet.closest('[data-testid="cellInnerDiv"]');
+  if (!container) return null;
+
+  const prevContainer = container.previousElementSibling;
+  if (!prevContainer) return null;
+
+  const prevArticle = prevContainer.querySelector<HTMLElement>('article[data-testid="tweet"]');
+  if (!prevArticle) return null;
+
+  // Only apply fade-in when there's a visible thread connector line
+  // This indicates an actual reply chain, not just adjacent timeline posts
+  const hasThreadLine = container.querySelector('[style*="border-left"], [style*="border-color"]');
+  if (!hasThreadLine) return null;
+
+  return prevArticle;
 }
 
 function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
   attachSoundEvents(tweet);
   clearVisualState(tweet);
-  const isMatch = tweet.dataset.miladyShrinkifierState === "match";
+  const isMatch = tweet.dataset.miladymaxxerState === "match";
 
   switch (settings.mode) {
     case "milady":
@@ -723,17 +752,17 @@ function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
       clearPlaceholder(tweet);
       tweet.style.display = "";
       if (isMatch) {
-        tweet.dataset.miladyShrinkifierEffect = "milady";
+        tweet.dataset.miladymaxxerEffect = "milady";
         // Check if previous tweet is non-milady for gradient effect
         const prevArticle = findPreviousArticle(tweet);
-        if (prevArticle?.dataset.miladyShrinkifierEffect === "diminish") {
+        if (prevArticle?.dataset.miladymaxxerEffect === "diminish") {
           tweet.dataset.miladyFadeIn = "true";
         } else {
           delete tweet.dataset.miladyFadeIn;
         }
         return;
       }
-      tweet.dataset.miladyShrinkifierEffect = "diminish";
+      tweet.dataset.miladymaxxerEffect = "diminish";
       delete tweet.dataset.miladyFadeIn;
       return;
     case "debug":
@@ -750,29 +779,29 @@ function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
 
 function clearEffects(tweet: HTMLElement): void {
   clearVisualState(tweet);
-  delete tweet.dataset.miladyShrinkifierDebug;
+  delete tweet.dataset.miladymaxxerDebug;
   clearPlaceholder(tweet);
   tweet.style.display = "";
 }
 
 function clearVisualState(tweet: HTMLElement): void {
-  delete tweet.dataset.miladyShrinkifierEffect;
+  delete tweet.dataset.miladymaxxerEffect;
 }
 
 function applyDebugState(tweet: HTMLElement): void {
-  if (tweet.dataset.miladyShrinkifierState === "match") {
-    tweet.dataset.miladyShrinkifierEffect = "debug-match";
+  if (tweet.dataset.miladymaxxerState === "match") {
+    tweet.dataset.miladymaxxerEffect = "debug-match";
     return;
   }
 
-  tweet.dataset.miladyShrinkifierEffect = "debug-miss";
+  tweet.dataset.miladymaxxerEffect = "debug-miss";
 }
 
 function applyHiddenState(tweet: HTMLElement): void {
   let placeholder = placeholders.get(tweet);
   if (!placeholder) {
     placeholder = document.createElement("div");
-    placeholder.className = "milady-shrinkifier-placeholder";
+    placeholder.className = "miladymaxxer-placeholder";
     const label = document.createElement("span");
     label.textContent = "Milady post hidden";
     const button = document.createElement("button");
@@ -814,7 +843,7 @@ function injectStyles(): void {
   style.id = STYLE_ID;
   style.textContent = `
     /* Diminish effect - tighter margins, only fade content */
-    [data-milady-shrinkifier-effect="diminish"] {
+    [data-miladymaxxer-effect="diminish"] {
       margin-top: -4px !important;
       margin-bottom: -4px !important;
       padding-top: 8px !important;
@@ -824,33 +853,33 @@ function injectStyles(): void {
     }
 
     /* Fade the tweet text and user info */
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="tweetText"],
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="User-Name"] {
+    [data-miladymaxxer-effect="diminish"] [data-testid="tweetText"],
+    [data-miladymaxxer-effect="diminish"] [data-testid="User-Name"] {
       opacity: 0.9 !important;
     }
 
     /* Fade images and media - 80% opacity */
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="tweetPhoto"],
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="videoPlayer"],
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.wrapper"],
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.layoutLarge.media"] {
+    [data-miladymaxxer-effect="diminish"] [data-testid="tweetPhoto"],
+    [data-miladymaxxer-effect="diminish"] [data-testid="videoPlayer"],
+    [data-miladymaxxer-effect="diminish"] [data-testid="card.wrapper"],
+    [data-miladymaxxer-effect="diminish"] [data-testid="card.layoutLarge.media"] {
       opacity: 0.8 !important;
       transition: opacity 0.15s ease !important;
     }
 
     /* Milady posts - ensure full opacity on all content */
-    [data-milady-shrinkifier-effect="milady"] [data-testid="tweetPhoto"],
-    [data-milady-shrinkifier-effect="milady"] [data-testid="videoPlayer"],
-    [data-milady-shrinkifier-effect="milady"] [data-testid="card.wrapper"],
-    [data-milady-shrinkifier-effect="milady"] [data-testid="card.layoutLarge.media"] {
+    [data-miladymaxxer-effect="milady"] [data-testid="tweetPhoto"],
+    [data-miladymaxxer-effect="milady"] [data-testid="videoPlayer"],
+    [data-miladymaxxer-effect="milady"] [data-testid="card.wrapper"],
+    [data-miladymaxxer-effect="milady"] [data-testid="card.layoutLarge.media"] {
       opacity: 1 !important;
     }
 
     /* Restore full opacity on hover */
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="tweetPhoto"]:hover,
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="videoPlayer"]:hover,
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.wrapper"]:hover,
-    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.layoutLarge.media"]:hover {
+    [data-miladymaxxer-effect="diminish"] [data-testid="tweetPhoto"]:hover,
+    [data-miladymaxxer-effect="diminish"] [data-testid="videoPlayer"]:hover,
+    [data-miladymaxxer-effect="diminish"] [data-testid="card.wrapper"]:hover,
+    [data-miladymaxxer-effect="diminish"] [data-testid="card.layoutLarge.media"]:hover {
       opacity: 1 !important;
     }
 
@@ -876,7 +905,7 @@ function injectStyles(): void {
     }
 
     /* MILADY effect - gold floating card */
-    [data-milady-shrinkifier-effect="milady"] {
+    [data-miladymaxxer-effect="milady"] {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
@@ -889,26 +918,26 @@ function injectStyles(): void {
     }
 
     /* Connected milady tweets - merge adjacent cards */
-    [data-milady-shrinkifier-effect="milady"] + [data-milady-shrinkifier-effect="milady"],
-    [data-milady-shrinkifier-effect="milady"] + [data-milady-shrinkifier-effect="diminish"] + [data-milady-shrinkifier-effect="milady"] {
+    [data-miladymaxxer-effect="milady"] + [data-miladymaxxer-effect="milady"],
+    [data-miladymaxxer-effect="milady"] + [data-miladymaxxer-effect="diminish"] + [data-miladymaxxer-effect="milady"] {
       margin-top: -7px !important;
       border-top-left-radius: 0 !important;
       border-top-right-radius: 0 !important;
       border-top: none !important;
     }
 
-    [data-milady-shrinkifier-effect="milady"]:has(+ [data-milady-shrinkifier-effect="milady"]) {
+    [data-miladymaxxer-effect="milady"]:has(+ [data-miladymaxxer-effect="milady"]) {
       border-bottom-left-radius: 0 !important;
       border-bottom-right-radius: 0 !important;
       margin-bottom: 0 !important;
     }
 
     /* Hover effect on milady posts */
-    [data-milady-shrinkifier-effect="milady"] {
+    [data-miladymaxxer-effect="milady"] {
       transition: transform 0.2s ease, box-shadow 0.2s ease !important;
     }
 
-    [data-milady-shrinkifier-effect="milady"]:hover {
+    [data-miladymaxxer-effect="milady"]:hover {
       transform: translateY(-2px) !important;
       box-shadow:
         0 4px 8px rgba(0, 0, 0, 0.08),
@@ -916,16 +945,136 @@ function injectStyles(): void {
         inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
     }
 
+    /* Light grey underline on handle for miladys you don't follow */
+    [data-miladymaxxer-effect="milady"]:has([aria-label*="Follow"]) [data-testid="User-Name"] > div > div > a span:first-of-type {
+      text-decoration: underline !important;
+      text-decoration-color: rgba(120, 120, 120, 0.6) !important;
+      text-underline-offset: 3px !important;
+      text-decoration-thickness: 1px !important;
+    }
+
+    /* Faded pink heart on milady posts to encourage liking */
+    [data-miladymaxxer-effect="milady"] [data-testid="like"] svg {
+      color: rgba(249, 24, 128, 0.4) !important;
+      transition: color 0.2s ease, transform 0.2s ease !important;
+    }
+
+    [data-miladymaxxer-effect="milady"] [data-testid="like"]:hover svg {
+      color: rgba(249, 24, 128, 0.7) !important;
+      transform: scale(1.1) !important;
+    }
+
+    /* Add spacing between milady user cells */
+    [data-miladymaxxer-effect="milady"][data-testid="UserCell"],
+    [data-miladymaxxer-effect="milady"][data-testid="user-cell"] {
+      margin-bottom: 8px !important;
+      padding: 8px !important;
+      border-radius: 12px !important;
+    }
+
+    /* Silver Follow button for miladys (they don't follow you, plain Follow) */
+    /* Exclude: Following/unfollow buttons, Follow back buttons */
+    [data-miladymaxxer-effect="milady"] [data-testid$="-follow"]:not([data-testid*="unfollow"]):not([aria-label*="back"]):not([aria-label*="Following"]),
+    [data-miladymaxxer-effect="milady"] button[aria-label="Follow"]:not([aria-label*="back"]) {
+      background: linear-gradient(135deg, #a8a8a8 0%, #d0d0d0 50%, #a8a8a8 100%) !important;
+      background-size: 200% 200% !important;
+      border: 1px solid rgba(128, 128, 128, 0.5) !important;
+      color: #1a1a1a !important;
+      font-weight: 700 !important;
+      box-shadow:
+        0 2px 6px rgba(100, 100, 100, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+      transition: all 0.2s ease !important;
+    }
+
+    /* Gold Follow Back button for miladys (they follow you!) */
+    [data-miladymaxxer-effect="milady"] [aria-label*="Follow back"],
+    [data-miladymaxxer-effect="milady"] button[aria-label*="Follow back"] {
+      background: linear-gradient(135deg, #d4af37 0%, #f0c850 50%, #d4af37 100%) !important;
+      background-size: 200% 200% !important;
+      animation: milady-shimmer 3s ease-in-out infinite !important;
+      border: 1px solid rgba(184, 134, 11, 0.5) !important;
+      color: #1a1a1a !important;
+      font-weight: 700 !important;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) !important;
+      box-shadow:
+        0 2px 8px rgba(212, 175, 55, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+      transition: all 0.2s ease !important;
+    }
+
+    [data-miladymaxxer-effect="milady"] [aria-label*="Follow back"]:hover,
+    [data-miladymaxxer-effect="milady"] button[aria-label*="Follow back"]:hover {
+      transform: scale(1.05) !important;
+      box-shadow:
+        0 4px 16px rgba(212, 175, 55, 0.6),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+    }
+
+    /* Silver button text */
+    [data-miladymaxxer-effect="milady"] [data-testid$="-follow"]:not([data-testid*="unfollow"]):not([aria-label*="back"]) span,
+    [data-miladymaxxer-effect="milady"] button[aria-label="Follow"] span {
+      color: #1a1a1a !important;
+    }
+
+    /* Gold button text */
+    [data-miladymaxxer-effect="milady"] [aria-label*="Follow back"] span {
+      color: #1a1a1a !important;
+    }
+
     /* Milady reply after non-milady - seamless top edge */
     [data-milady-fade-in="true"] {
       border-top: none !important;
       border-top-left-radius: 0 !important;
       border-top-right-radius: 0 !important;
-      margin-top: 0 !important;
+      margin-top: -1px !important;
+      /* Fade background from transparent at top to full color at 3% */
+      background: linear-gradient(to bottom,
+        rgba(255, 252, 240, 0) 0%,
+        rgba(255, 252, 240, 1) 3%,
+        rgba(255, 255, 255, 1) 100%) !important;
+    }
+
+    /* Fade the gold overlays at the top too */
+    [data-milady-fade-in="true"]::before,
+    [data-milady-fade-in="true"]::after {
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 3%) !important;
+      mask-image: linear-gradient(to bottom, transparent 0%, black 3%) !important;
+    }
+
+    /* Reset styling for quoted tweets inside milady posts - give them opaque background */
+    [data-miladymaxxer-effect="milady"] [data-testid="quoteTweet"] {
+      background: rgb(247, 249, 249) !important;
+      border: 1px solid rgb(207, 217, 222) !important;
+      border-radius: 16px !important;
+      box-shadow: none !important;
+      position: relative !important;
+      z-index: 3 !important;
+      isolation: isolate !important;
+    }
+
+    /* Dark mode quote tweets */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="quoteTweet"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="quoteTweet"] {
+      background: rgb(22, 24, 28) !important;
+      border-color: rgb(51, 54, 57) !important;
+    }
+
+    /* Dim mode quote tweets */
+    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="quoteTweet"],
+    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="quoteTweet"] {
+      background: rgb(30, 39, 50) !important;
+      border-color: rgb(56, 68, 77) !important;
+    }
+
+    /* Card wrappers inside milady posts */
+    [data-miladymaxxer-effect="milady"] [data-testid="card.wrapper"] {
+      position: relative !important;
+      z-index: 3 !important;
     }
 
     /* Gold metallic sheen overlay */
-    [data-milady-shrinkifier-effect="milady"]::before {
+    [data-miladymaxxer-effect="milady"]::before {
       content: "" !important;
       position: absolute !important;
       inset: 0 !important;
@@ -944,7 +1093,7 @@ function injectStyles(): void {
     }
 
     /* Shimmer effect overlay */
-    [data-milady-shrinkifier-effect="milady"]::after {
+    [data-miladymaxxer-effect="milady"]::after {
       content: "" !important;
       position: absolute !important;
       inset: 0 !important;
@@ -964,8 +1113,8 @@ function injectStyles(): void {
     }
 
     /* Light mode - gold sheen */
-    html[style*="background-color: rgb(255, 255, 255)"] [data-milady-shrinkifier-effect="milady"]::before,
-    body[style*="background-color: rgb(255, 255, 255)"] [data-milady-shrinkifier-effect="milady"]::before {
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"]::before,
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"]::before {
       background:
         linear-gradient(
           135deg,
@@ -979,13 +1128,13 @@ function injectStyles(): void {
     }
 
     /* Light mode - warm gold tint */
-    [data-milady-shrinkifier-effect="milady"] {
+    [data-miladymaxxer-effect="milady"] {
       background: linear-gradient(180deg, rgba(255, 252, 240, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
     }
 
     /* Dark mode fallback - gold glow */
     @media (prefers-color-scheme: dark) {
-      [data-milady-shrinkifier-effect="milady"] {
+      [data-miladymaxxer-effect="milady"] {
         background: rgba(28, 30, 34, 1) !important;
         border-color: rgba(212, 175, 55, 0.3) !important;
         box-shadow:
@@ -997,8 +1146,8 @@ function injectStyles(): void {
     }
 
     /* Twitter Light mode - gold accents */
-    html[style*="background-color: rgb(255, 255, 255)"] [data-milady-shrinkifier-effect="milady"],
-    body[style*="background-color: rgb(255, 255, 255)"] [data-milady-shrinkifier-effect="milady"] {
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"],
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"] {
       background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
       border-color: rgba(212, 175, 55, 0.3) !important;
       box-shadow:
@@ -1007,33 +1156,31 @@ function injectStyles(): void {
         inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
     }
 
-    /* Twitter Dim mode (dark blue) - gold glow */
-    html[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"],
-    body[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"] {
-      background: rgba(28, 42, 56, 1) !important;
-      border-color: rgba(212, 175, 55, 0.7) !important;
+    /* Twitter Dim mode (dark blue) - subtle gold accent */
+    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"],
+    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] {
+      background: rgba(25, 38, 52, 1) !important;
+      border-color: rgba(212, 175, 55, 0.25) !important;
       box-shadow:
-        0 0 2px rgba(255, 215, 0, 0.6),
-        0 0 12px rgba(212, 175, 55, 0.35),
-        0 0 24px rgba(255, 215, 0, 0.15),
-        inset 0 1px 0 rgba(255, 215, 0, 0.25) !important;
+        0 0 1px rgba(255, 215, 0, 0.2),
+        0 0 8px rgba(212, 175, 55, 0.12),
+        inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
     }
 
-    /* Twitter Dark mode (black) - gold glow */
-    html[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"],
-    body[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"] {
-      background: rgba(20, 22, 26, 1) !important;
-      border-color: rgba(212, 175, 55, 0.8) !important;
+    /* Twitter Dark mode (black) - subtle gold accent */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
+      background: rgba(22, 22, 24, 1) !important;
+      border-color: rgba(212, 175, 55, 0.25) !important;
       box-shadow:
-        0 0 2px rgba(255, 215, 0, 0.7),
-        0 0 14px rgba(212, 175, 55, 0.4),
-        0 0 28px rgba(255, 215, 0, 0.18),
-        inset 0 1px 0 rgba(255, 215, 0, 0.3) !important;
+        0 0 1px rgba(255, 215, 0, 0.2),
+        0 0 8px rgba(212, 175, 55, 0.1),
+        inset 0 1px 0 rgba(255, 215, 0, 0.08) !important;
     }
 
     /* Gold metallic sheen - dim mode */
-    html[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"]::before,
-    body[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"]::before {
+    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"]::before,
+    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"]::before {
       background:
         linear-gradient(
           135deg,
@@ -1045,23 +1192,23 @@ function injectStyles(): void {
         ) !important;
     }
 
-    /* Gold metallic sheen - dark mode */
-    html[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"]::before,
-    body[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"]::before {
+    /* Gold metallic sheen - dark mode (subtle) */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::before,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"]::before {
       background:
         linear-gradient(
           135deg,
-          rgba(255, 215, 0, 0.15) 0%,
-          rgba(212, 175, 55, 0.05) 25%,
+          rgba(255, 215, 0, 0.06) 0%,
+          rgba(212, 175, 55, 0.02) 25%,
           rgba(255, 255, 255, 0) 50%,
-          rgba(212, 175, 55, 0.04) 75%,
-          rgba(255, 215, 0, 0.12) 100%
+          rgba(212, 175, 55, 0.02) 75%,
+          rgba(255, 215, 0, 0.05) 100%
         ) !important;
     }
 
     /* HDR effect on Milady avatars */
-    [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"] img,
-    [data-milady-shrinkifier-effect="milady"] img[src*="profile_images"] {
+    [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"] img,
+    [data-miladymaxxer-effect="milady"] img[src*="profile_images"] {
       filter:
         contrast(1.08)
         saturate(1.25)
@@ -1070,34 +1217,34 @@ function injectStyles(): void {
     }
 
     /* Gold glow behind the avatar */
-    [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"] {
+    [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"] {
       filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.3)) !important;
     }
 
     /* Stronger gold glow in dark modes */
     @media (prefers-color-scheme: dark) {
-      [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"] {
+      [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"] {
         filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.35)) !important;
       }
     }
 
-    html[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"],
-    body[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"],
-    html[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"],
-    body[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"] {
-      filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.4)) !important;
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
+    html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"],
+    body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] [data-testid="Tweet-User-Avatar"] {
+      filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.15)) !important;
     }
 
-    [data-milady-shrinkifier-effect="debug-match"] {
+    [data-miladymaxxer-effect="debug-match"] {
       position: relative !important;
     }
 
-    [data-milady-shrinkifier-effect="debug-miss"] {
+    [data-miladymaxxer-effect="debug-miss"] {
       position: relative !important;
     }
 
-    [data-milady-shrinkifier-effect="debug-match"]::after,
-    [data-milady-shrinkifier-effect="debug-miss"]::after {
+    [data-miladymaxxer-effect="debug-match"]::after,
+    [data-miladymaxxer-effect="debug-miss"]::after {
       content: "";
       position: absolute;
       inset: 0;
@@ -1107,9 +1254,9 @@ function injectStyles(): void {
       z-index: 2147483647;
     }
 
-    [data-milady-shrinkifier-effect="debug-match"]::before,
-    [data-milady-shrinkifier-effect="debug-miss"]::before {
-      content: attr(data-milady-shrinkifier-debug);
+    [data-miladymaxxer-effect="debug-match"]::before,
+    [data-miladymaxxer-effect="debug-miss"]::before {
+      content: attr(data-miladymaxxer-debug);
       position: absolute;
       top: 6px;
       right: 6px;
@@ -1125,15 +1272,15 @@ function injectStyles(): void {
       border-radius: 0;
     }
 
-    [data-milady-shrinkifier-effect="debug-match"]::after {
+    [data-miladymaxxer-effect="debug-match"]::after {
       border-color: rgba(231, 76, 60, 0.95);
     }
 
-    [data-milady-shrinkifier-effect="debug-miss"]::after {
+    [data-miladymaxxer-effect="debug-miss"]::after {
       border-color: rgba(46, 204, 113, 0.75);
     }
 
-    .milady-shrinkifier-placeholder {
+    .miladymaxxer-placeholder {
       display: flex;
       align-items: center;
       gap: 12px;
@@ -1150,7 +1297,7 @@ function injectStyles(): void {
       line-height: 20px;
     }
 
-    .milady-shrinkifier-placeholder button {
+    .miladymaxxer-placeholder button {
       border: 0;
       padding: 0;
       background: transparent;
@@ -1159,7 +1306,7 @@ function injectStyles(): void {
       cursor: pointer;
     }
 
-    .milady-shrinkifier-placeholder button:hover {
+    .miladymaxxer-placeholder button:hover {
       text-decoration: underline;
     }
   `;
