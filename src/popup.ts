@@ -551,6 +551,7 @@ function normalizeCollectedAvatars(value: unknown): CollectedAvatarMap {
           : normalizedUrl,
       handles: normalizeStringArray(candidate.handles, true),
       displayNames: normalizeStringArray(candidate.displayNames, false),
+      sourceSurfaces: normalizeStringArray(candidate.sourceSurfaces, false),
       seenCount: readNumber(candidate.seenCount),
       firstSeenAt:
         typeof candidate.firstSeenAt === "string" ? candidate.firstSeenAt : new Date(0).toISOString(),
@@ -558,6 +559,8 @@ function normalizeCollectedAvatars(value: unknown): CollectedAvatarMap {
         typeof candidate.lastSeenAt === "string" ? candidate.lastSeenAt : new Date(0).toISOString(),
       exampleProfileUrl:
         typeof candidate.exampleProfileUrl === "string" ? candidate.exampleProfileUrl : null,
+      exampleNotificationUrl:
+        typeof candidate.exampleNotificationUrl === "string" ? candidate.exampleNotificationUrl : null,
       exampleTweetUrl: typeof candidate.exampleTweetUrl === "string" ? candidate.exampleTweetUrl : null,
       heuristicMatch:
         typeof candidate.heuristicMatch === "boolean" ? candidate.heuristicMatch : null,

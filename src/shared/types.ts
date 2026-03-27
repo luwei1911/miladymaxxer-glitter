@@ -30,10 +30,12 @@ export interface CollectedAvatar {
   originalUrl: string;
   handles: string[];
   displayNames: string[];
+  sourceSurfaces: string[];
   seenCount: number;
   firstSeenAt: string;
   lastSeenAt: string;
   exampleProfileUrl: string | null;
+  exampleNotificationUrl: string | null;
   exampleTweetUrl: string | null;
   heuristicMatch: boolean | null;
   heuristicSource: "phash" | "onnx" | null;

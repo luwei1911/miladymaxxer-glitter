@@ -38,9 +38,11 @@ import type {
 
 const STYLE_ID = "milady-shrinkifier-style";
 const ARTICLE_SELECTOR = 'article[data-testid="tweet"]';
+const NOTIFICATION_SELECTOR = 'article[data-testid="notification"]';
 const RESCAN_INTERVAL_MS = 1000;
 const cache = new Map<string, Promise<DetectionResult>>();
 const processed = new WeakMap<HTMLElement, string>();
+const processedNotifications = new WeakMap<HTMLElement, string>();
 const placeholders = new WeakMap<HTMLElement, HTMLDivElement>();
 const revealed = new WeakMap<HTMLElement, string>();
 
@@ -85,7 +87,11 @@ async function boot(): Promise<void> {
 
 async function processVisibleTweets(): Promise<void> {
   const tweets = Array.from(document.querySelectorAll<HTMLElement>(ARTICLE_SELECTOR));
-  await Promise.allSettled(tweets.map((tweet) => processTweet(tweet)));
+  const notifications = Array.from(document.querySelectorAll<HTMLElement>(NOTIFICATION_SELECTOR));
+  await Promise.allSettled([
+    ...tweets.map((tweet) => processTweet(tweet)),
+    ...notifications.map((notification) => processNotificationGroup(notification)),
+  ]);
 }
 
 function scheduleProcessVisibleTweets(): void {
@@ -147,6 +153,8 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
         author,
         whitelisted: true,
         exampleTweetUrl: findTweetUrl(tweet),
+        exampleNotificationUrl: null,
+        sourceSurface: "tweet",
       });
       revealed.delete(tweet);
       clearEffects(tweet);
@@ -165,6 +173,8 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
       author,
       whitelisted: false,
       exampleTweetUrl: findTweetUrl(tweet),
+      exampleNotificationUrl: null,
+      sourceSurface: "tweet",
       result,
     });
     if (result.matched) {
@@ -189,6 +199,37 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
     delete tweet.dataset.miladyShrinkifier;
     tweet.dataset.miladyShrinkifierState = "miss";
     applyMode(tweet);
+  }
+}
+
+async function processNotificationGroup(notification: HTMLElement): Promise<void> {
+  const avatarEntries = collectNotificationAvatarEntries(notification);
+  if (avatarEntries.length === 0) {
+    return;
+  }
+
+  const signature = avatarEntries
+    .map((entry) => `${entry.handle}:${entry.normalizedUrl}`)
+    .sort()
+    .join("|");
+  if (processedNotifications.get(notification) === signature) {
+    return;
+  }
+  processedNotifications.set(notification, signature);
+
+  for (const entry of avatarEntries) {
+    recordCollectedAvatar({
+      normalizedUrl: entry.normalizedUrl,
+      originalUrl: entry.originalUrl,
+      author: {
+        handle: entry.handle,
+        displayName: null,
+      },
+      whitelisted: settings.whitelistHandles.includes(entry.handle),
+      exampleTweetUrl: null,
+      exampleNotificationUrl: window.location.href,
+      sourceSurface: "notification-group",
+    });
   }
 }
 
@@ -618,6 +659,8 @@ function recordCollectedAvatar(input: {
   author: { handle: string; displayName: string | null } | null;
   whitelisted: boolean;
   exampleTweetUrl: string | null;
+  exampleNotificationUrl: string | null;
+  sourceSurface: string;
   result?: DetectionResult;
 }): void {
   if (!collectedAvatars) {
@@ -631,11 +674,13 @@ function recordCollectedAvatar(input: {
     originalUrl: input.originalUrl || existing?.originalUrl || input.normalizedUrl,
     handles: mergeUniqueStrings(existing?.handles, input.author?.handle ?? null, true),
     displayNames: mergeUniqueStrings(existing?.displayNames, input.author?.displayName ?? null, false),
+    sourceSurfaces: mergeUniqueStrings(existing?.sourceSurfaces, input.sourceSurface, false),
     seenCount: (existing?.seenCount ?? 0) + 1,
     firstSeenAt: existing?.firstSeenAt ?? now,
     lastSeenAt: now,
     exampleProfileUrl:
       existing?.exampleProfileUrl ?? (input.author ? toAbsoluteUrl(`/${input.author.handle}`) : null),
+    exampleNotificationUrl: existing?.exampleNotificationUrl ?? input.exampleNotificationUrl,
     exampleTweetUrl: existing?.exampleTweetUrl ?? input.exampleTweetUrl,
     heuristicMatch:
       typeof input.result?.matched === "boolean" ? input.result.matched : existing?.heuristicMatch ?? null,
@@ -775,6 +820,7 @@ function normalizeCollectedAvatars(value: unknown): CollectedAvatarMap {
           : normalizedUrl,
       handles: normalizeStringArray(candidate.handles, true),
       displayNames: normalizeStringArray(candidate.displayNames, false),
+      sourceSurfaces: normalizeStringArray(candidate.sourceSurfaces, false),
       seenCount: readNumber(candidate.seenCount),
       firstSeenAt:
         typeof candidate.firstSeenAt === "string" ? candidate.firstSeenAt : new Date(0).toISOString(),
@@ -782,6 +828,8 @@ function normalizeCollectedAvatars(value: unknown): CollectedAvatarMap {
         typeof candidate.lastSeenAt === "string" ? candidate.lastSeenAt : new Date(0).toISOString(),
       exampleProfileUrl:
         typeof candidate.exampleProfileUrl === "string" ? candidate.exampleProfileUrl : null,
+      exampleNotificationUrl:
+        typeof candidate.exampleNotificationUrl === "string" ? candidate.exampleNotificationUrl : null,
       exampleTweetUrl: typeof candidate.exampleTweetUrl === "string" ? candidate.exampleTweetUrl : null,
       heuristicMatch:
         typeof candidate.heuristicMatch === "boolean" ? candidate.heuristicMatch : null,
@@ -841,6 +889,33 @@ function normalizeHandle(value: string | null | undefined): string {
 function findTweetUrl(tweet: HTMLElement): string | null {
   const link = tweet.querySelector<HTMLAnchorElement>('a[href*="/status/"]');
   return toAbsoluteUrl(link?.getAttribute("href"));
+}
+
+function collectNotificationAvatarEntries(notification: HTMLElement): Array<{
+  handle: string;
+  normalizedUrl: string;
+  originalUrl: string;
+}> {
+  const results = new Map<string, { handle: string; normalizedUrl: string; originalUrl: string }>();
+
+  for (const container of Array.from(notification.querySelectorAll<HTMLElement>('[data-testid^="UserAvatar-Container-"]'))) {
+    const testId = container.dataset.testid ?? "";
+    const handle = normalizeHandle(testId.replace(/^UserAvatar-Container-/, ""));
+    const image = container.querySelector<HTMLImageElement>('img[src*="profile_images"]');
+    const source = image?.currentSrc || image?.src;
+    if (!handle || !source) {
+      continue;
+    }
+
+    const normalizedUrl = normalizeProfileImageUrl(source);
+    results.set(`${handle}:${normalizedUrl}`, {
+      handle,
+      normalizedUrl,
+      originalUrl: source,
+    });
+  }
+
+  return Array.from(results.values());
 }
 
 function toAbsoluteUrl(value: string | null | undefined): string | null {
