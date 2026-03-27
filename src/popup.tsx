@@ -24,8 +24,8 @@ import type {
 type TabId = "filter" | "stats" | "accounts" | "dataset";
 
 const TAB_LABELS: Array<{ id: TabId; label: string }> = [
-  { id: "filter", label: "Config" },
   { id: "stats", label: "Stats" },
+  { id: "filter", label: "Config" },
   { id: "accounts", label: "Collection" },
   { id: "dataset", label: "Data" },
 ];
