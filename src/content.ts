@@ -1127,6 +1127,16 @@ function injectStyles(): void {
       color: rgba(249, 24, 128, 0.7) !important;
     }
 
+    /* Hide dislike/downvote button on milady posts */
+    [data-miladymaxxer-effect="milady"] [data-testid="downvote"],
+    [data-miladymaxxer-effect="milady"] [data-testid="dislike"],
+    [data-miladymaxxer-effect="milady"] [aria-label*="Downvote"],
+    [data-miladymaxxer-effect="milady"] [aria-label*="downvote"],
+    [data-miladymaxxer-effect="milady"] [aria-label*="Dislike"],
+    [data-miladymaxxer-effect="milady"] [aria-label*="dislike"] {
+      display: none !important;
+    }
+
     /* Silver metallic for milady posts with 0 likes */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
       background: linear-gradient(180deg, rgba(245, 245, 248, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
