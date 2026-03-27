@@ -312,36 +312,37 @@ export function attachDMSounds(): void {
 }
 
 
-// Observe incoming messages and reactions in DMs/GCs
+// Observe incoming messages in DMs/GCs
+// We observe dm-container (high in the tree) so the observer survives
+// React re-renders that destroy/recreate dm-message-list.
 let dmObserver: MutationObserver | null = null;
-let observedMessageList: Element | null = null;
+let observedDmContainer: Element | null = null;
+const seenMessageIds = new Set<string>();
 
 export function observeIncomingMessages(): void {
-  const messageList = document.querySelector(DM_MESSAGE_LIST) ||
-                      document.querySelector(DM_CONVERSATION_PANEL);
+  const container = document.querySelector(DM_CONTAINER);
 
-  if (!messageList) {
-    // Left the DM view — tear down observer
+  if (!container) {
     if (dmObserver) {
       dmObserver.disconnect();
       dmObserver = null;
-      observedMessageList = null;
+      observedDmContainer = null;
+      seenMessageIds.clear();
     }
     return;
   }
 
-  // Already observing this exact element and it's still in the DOM
-  if (observedMessageList === messageList && observedMessageList.isConnected) return;
+  // Already observing this container
+  if (observedDmContainer === container && observedDmContainer.isConnected) return;
 
-  // Tear down stale observer
   if (dmObserver) {
     dmObserver.disconnect();
   }
-  observedMessageList = messageList;
+  observedDmContainer = container;
+  seenMessageIds.clear();
 
-  // Track seen message UUIDs (Twitter virtualizes the DOM so counting nodes is unreliable)
-  const seenMessageIds = new Set<string>();
-  for (const msg of Array.from(messageList.querySelectorAll(DM_MESSAGE))) {
+  // Seed with all currently visible message IDs
+  for (const msg of Array.from(container.querySelectorAll(DM_MESSAGE))) {
     const id = msg.getAttribute("data-testid");
     if (id) seenMessageIds.add(id);
   }
@@ -356,7 +357,7 @@ export function observeIncomingMessages(): void {
       if (!document.hasFocus()) return;
 
       let hasNew = false;
-      for (const msg of Array.from(messageList.querySelectorAll(DM_MESSAGE))) {
+      for (const msg of Array.from(container.querySelectorAll(DM_MESSAGE))) {
         const id = msg.getAttribute("data-testid");
         if (id && !seenMessageIds.has(id)) {
           seenMessageIds.add(id);
@@ -367,10 +368,10 @@ export function observeIncomingMessages(): void {
       if (hasNew) {
         playMessageBlip();
       }
-    }, 100);
+    }, 200);
   });
 
-  dmObserver.observe(messageList, {
+  dmObserver.observe(container, {
     childList: true,
     subtree: true,
   });
