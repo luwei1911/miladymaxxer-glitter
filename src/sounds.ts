@@ -109,15 +109,15 @@ function playClickSound(isMilady: boolean): void {
 
 function playSendSound(): void {
   if (!settings.soundEnabled) return;
-  // Thup - low percussive thud
-  playTone(180, 0.06, "triangle", 0.12, 0, 0.02);
-  playTone(120, 0.04, "sine", 0.08, 0, 0.01);
+  // Thup - tight percussive tap, no resonance
+  playTone(250, 0.025, "square", 0.06, 0, 0.005);
 }
 
 function playMessageBlip(): void {
   if (!settings.soundEnabled) return;
-  // Pip - short high tap
-  playTone(1400, 0.03, "sine", 0.1, 0, 0.01);
+  // Pip - audible high tap
+  playTone(1200, 0.08, "sine", 0.15, 0, 0.02);
+  setTimeout(() => playTone(1500, 0.06, "sine", 0.1, 0, 0.015), 30);
 }
 
 function playMediaHoverSound(isMilady: boolean): void {
@@ -325,7 +325,6 @@ export function observeIncomingMessages(): void {
   let dmMutationTimer: ReturnType<typeof setTimeout> | null = null;
 
   dmObserver = new MutationObserver(() => {
-    // Debounce: Twitter may insert multiple nodes in rapid succession
     if (dmMutationTimer) return;
     dmMutationTimer = setTimeout(() => {
       dmMutationTimer = null;
