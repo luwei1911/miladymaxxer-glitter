@@ -1267,12 +1267,12 @@ function injectStyles(): void {
     /* Dark mode liked - slightly warmer with gold edge */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: rgb(10, 9, 5) !important;
-      border-color: rgba(212, 175, 55, 0.45) !important;
+      background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
+      border-color: rgba(180, 145, 50, 0.45) !important;
       box-shadow:
-        0 0 1px rgba(212, 175, 55, 0.6),
-        0 0 8px rgba(212, 175, 55, 0.15),
-        inset 0 1px 0 rgba(255, 215, 0, 0.08) !important;
+        0 4px 20px rgba(180, 145, 50, 0.18),
+        0 8px 35px rgba(140, 110, 35, 0.1),
+        inset 0 1px 0 rgba(212, 175, 55, 0.15) !important;
     }
 
     /* Add spacing between milady user cells */
