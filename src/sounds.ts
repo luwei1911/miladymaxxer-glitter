@@ -109,18 +109,15 @@ function playClickSound(isMilady: boolean): void {
 
 function playSendSound(): void {
   if (!settings.soundEnabled) return;
-  // Quick ascending chime
-  playTone(523.25, 0.08, "sine", 0.07); // C5
-  setTimeout(() => playTone(659.25, 0.08, "sine", 0.07), 30); // E5
-  setTimeout(() => playTone(783.99, 0.08, "sine", 0.07), 60); // G5
-  setTimeout(() => playTone(1046.5, 0.12, "sine", 0.08), 90); // C6
-  setTimeout(() => playChord([1318.5, 1568], 0.1, 0.04), 120); // E6 + G6 sparkle
+  // Thup - low percussive thud
+  playTone(180, 0.06, "triangle", 0.12, 0, 0.02);
+  playTone(120, 0.04, "sine", 0.08, 0, 0.01);
 }
 
 function playMessageBlip(): void {
   if (!settings.soundEnabled) return;
-  playTone(880, 0.08, "sine", 0.06); // A5 short blip
-  setTimeout(() => playTone(1100, 0.06, "sine", 0.04), 50); // Higher follow-up
+  // Pip - short high tap
+  playTone(1400, 0.03, "sine", 0.1, 0, 0.01);
 }
 
 function playMediaHoverSound(isMilady: boolean): void {
@@ -188,13 +185,6 @@ export function attachGlobalMediaHoverSounds(): void {
   }
 }
 
-// Reaction sound - short sparkle
-function playReactionSound(): void {
-  if (!settings.soundEnabled) return;
-  playTone(1400, 0.08, "sine", 0.05);
-  setTimeout(() => playTone(1800, 0.06, "sine", 0.03), 40);
-}
-
 export function attachPostButtonSound(): void {
   if (settings.mode === "off") return;
 
@@ -246,23 +236,13 @@ export function attachDMSounds(): void {
       }
     }
 
-    // Check for emoji/reaction in popup layers
-    const inLayers = target.closest(LAYERS);
-    if (inLayers && button) {
-      const ariaLabel = button.getAttribute("aria-label") || "";
-      if (/^[\p{Emoji}\u200d]+$/u.test(ariaLabel) ||
-          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u.test(ariaLabel)) {
-        playReactionSound();
-        return;
-      }
-    }
-
-    // Check for DM conversation panel click (skip if clicking a reaction/emoji button)
+    // Skip reaction/emoji buttons — no sound for react picker
     if (button) {
       const ariaLabel = button.getAttribute("aria-label") || "";
-      // Skip reaction opener buttons (emoji, heart, etc.)
       if (/react|emoji|like/i.test(ariaLabel) ||
-          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u.test(ariaLabel)) {
+          /^[\p{Emoji}\u200d]+$/u.test(ariaLabel) ||
+          /^[\p{Emoji_Presentation}\p{Extended_Pictographic}]/u.test(ariaLabel) ||
+          target.closest(LAYERS)) {
         return;
       }
     }
