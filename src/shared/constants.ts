@@ -6,7 +6,7 @@ import type {
 } from "./types";
 
 export const DEFAULT_SETTINGS: ExtensionSettings = {
-  mode: "off",
+  mode: "milady",
   whitelistHandles: [],
 };
 
