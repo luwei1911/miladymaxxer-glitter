@@ -933,8 +933,14 @@ function doesUserFollow(tweet: HTMLElement): boolean {
     }
   }
 
-  // Default: assume following to avoid false underlines
-  return true;
+  // Check if there's a "Follows you" badge - they follow you but you might not follow back
+  const followsYou = tweet.querySelector('[data-testid="userFollowIndicator"]');
+  if (followsYou) {
+    return false;
+  }
+
+  // Default: assume NOT following to show the underline indicator
+  return false;
 }
 
 function applyDebugState(tweet: HTMLElement): void {
@@ -1642,37 +1648,46 @@ function injectStyles(): void {
       }
     }
 
-    /* Twitter Light mode - gold accents */
+    /* Twitter Light mode - rich gold with depth */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.3) !important;
+      background: linear-gradient(180deg, rgb(255, 248, 220) 0%, rgb(255, 242, 200) 50%, rgb(250, 235, 190) 100%) !important;
+      border: 1.5px solid rgba(200, 160, 50, 0.5) !important;
       box-shadow:
-        0 2px 4px rgba(184, 134, 11, 0.08),
-        0 4px 12px rgba(212, 175, 55, 0.12),
-        inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
+        0 1px 3px rgba(0, 0, 0, 0.12),
+        0 4px 12px rgba(180, 140, 40, 0.15),
+        0 0 0 1px rgba(255, 220, 130, 0.3),
+        0 8px 25px rgba(200, 160, 60, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -2px 4px rgba(180, 140, 40, 0.1) !important;
     }
 
-    /* Twitter Dim mode (dark blue) - same gold as light mode */
+    /* Twitter Dim mode (dark blue) - rich gold */
     html[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(21, 32, 43)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.3) !important;
+      background: linear-gradient(180deg, rgb(255, 248, 220) 0%, rgb(255, 242, 200) 50%, rgb(250, 235, 190) 100%) !important;
+      border: 1.5px solid rgba(200, 160, 50, 0.6) !important;
       box-shadow:
-        0 2px 4px rgba(184, 134, 11, 0.08),
-        0 4px 12px rgba(212, 175, 55, 0.12),
-        inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
+        0 1px 3px rgba(0, 0, 0, 0.2),
+        0 4px 12px rgba(180, 140, 40, 0.2),
+        0 0 0 1px rgba(255, 220, 130, 0.25),
+        0 8px 30px rgba(200, 160, 60, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -2px 4px rgba(180, 140, 40, 0.1) !important;
     }
 
-    /* Twitter Dark mode (black) - same gold as light mode */
+    /* Twitter Dark mode (black) - rich gold */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.3) !important;
+      background: linear-gradient(180deg, rgb(255, 248, 220) 0%, rgb(255, 242, 200) 50%, rgb(250, 235, 190) 100%) !important;
+      border: 1.5px solid rgba(200, 160, 50, 0.6) !important;
       box-shadow:
-        0 2px 4px rgba(184, 134, 11, 0.08),
-        0 4px 12px rgba(212, 175, 55, 0.12),
-        inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
+        0 1px 3px rgba(0, 0, 0, 0.25),
+        0 4px 12px rgba(180, 140, 40, 0.2),
+        0 0 0 1px rgba(255, 220, 130, 0.2),
+        0 8px 35px rgba(200, 160, 60, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        inset 0 -2px 4px rgba(180, 140, 40, 0.1) !important;
     }
 
     /* Gold metallic sheen - dim mode (same as light) */
