@@ -10,6 +10,9 @@
     "48": "milady-logo.png",
     "128": "milady-logo.png"
   },
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
