@@ -849,6 +849,11 @@ function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
           }
         } else {
           delete tweet.dataset.miladymaxxerLiked;
+          if (countedLikes.has(tweet)) {
+            countedLikes.delete(tweet);
+            miladyLikesThisSession = Math.max(0, miladyLikesThisSession - 1);
+            updateBadge(miladyLikesThisSession);
+          }
         }
         // Check if user follows this milady
         if (doesUserFollow(tweet)) {
@@ -1601,15 +1606,15 @@ function injectStyles(): void {
       background: linear-gradient(180deg, rgba(255, 252, 240, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
     }
 
-    /* Dark mode fallback - gold glow */
+    /* Dark mode fallback */
     @media (prefers-color-scheme: dark) {
       [data-miladymaxxer-effect="milady"] {
-        background: rgb(8, 7, 4) !important;
-        border-color: rgba(212, 175, 55, 0.35) !important;
+        background: linear-gradient(180deg, rgb(18, 15, 8) 0%, rgb(12, 10, 5) 100%) !important;
+        border-color: rgba(160, 130, 50, 0.3) !important;
         box-shadow:
-          0 0 1px rgba(212, 175, 55, 0.5),
-          0 0 6px rgba(212, 175, 55, 0.1),
-          inset 0 1px 0 rgba(255, 215, 0, 0.06) !important;
+          0 4px 16px rgba(180, 145, 50, 0.1),
+          0 8px 30px rgba(140, 110, 35, 0.05),
+          inset 0 1px 0 rgba(200, 165, 60, 0.08) !important;
       }
     }
 
@@ -1628,12 +1633,12 @@ function injectStyles(): void {
     /* Twitter Dark mode (black) - dark gold card */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
-      background: rgb(8, 7, 4) !important;
-      border: 1.5px solid rgba(212, 175, 55, 0.35) !important;
+      background: linear-gradient(180deg, rgb(18, 15, 8) 0%, rgb(12, 10, 5) 100%) !important;
+      border: 1px solid rgba(160, 130, 50, 0.35) !important;
       box-shadow:
-        0 0 1px rgba(212, 175, 55, 0.5),
-        0 0 6px rgba(212, 175, 55, 0.1),
-        inset 0 1px 0 rgba(255, 215, 0, 0.06) !important;
+        0 4px 16px rgba(180, 145, 50, 0.12),
+        0 8px 30px rgba(140, 110, 35, 0.06),
+        inset 0 1px 0 rgba(200, 165, 60, 0.1) !important;
     }
 
 
