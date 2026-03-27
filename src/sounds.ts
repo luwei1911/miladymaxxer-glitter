@@ -24,20 +24,19 @@ const soundsAttached = new WeakSet<HTMLElement>();
 let dmListenersAttached = false;
 let lastMessageCount = 0;
 
-// Polyphonic sound system using Web Audio API
-// AudioContext is created lazily on first sound (which is always triggered by user gesture)
-function getAudioContext(): AudioContext | null {
+// AudioContext can only be created/resumed after a real user gesture (click/keydown).
+// Hover events don't qualify, so pass hoverOnly=true to silently skip.
+function getAudioContext(hoverOnly = false): AudioContext | null {
   if (!audioContext) {
+    if (hoverOnly) return null;
     try {
       audioContext = new AudioContext();
     } catch {
-      // Audio not supported
       return null;
     }
   }
-  // Resume is safe here because getAudioContext is only called from playTone,
-  // which is only called from user-triggered event handlers
   if (audioContext.state === "suspended") {
+    if (hoverOnly) return null;
     void audioContext.resume();
   }
   return audioContext;
@@ -85,7 +84,7 @@ function playChord(frequencies: number[], duration: number, volume: number = 0.0
 
 // Sound presets
 function playHoverSound(isMilady: boolean): void {
-  if (!settings.soundEnabled) return;
+  if (!settings.soundEnabled || !getAudioContext(true)) return;
   if (isMilady) {
     // Sparkly high chime for milady
     playTone(1200, 0.12, "sine", 0.06);
@@ -125,7 +124,7 @@ function playMessageBlip(): void {
 }
 
 function playMediaHoverSound(isMilady: boolean): void {
-  if (!settings.soundEnabled) return;
+  if (!settings.soundEnabled || !getAudioContext(true)) return;
   if (isMilady) {
     // Soft shimmer for milady media
     playTone(800, 0.1, "sine", 0.04);
@@ -181,7 +180,7 @@ export function attachGlobalMediaHoverSounds(): void {
     if (soundsAttached.has(media)) continue;
     soundsAttached.add(media);
     media.addEventListener("mouseenter", () => {
-      if (settings.mode !== "off" && settings.soundEnabled) {
+      if (settings.mode !== "off" && settings.soundEnabled && getAudioContext(true)) {
         // Very subtle, short pip — quieter and shorter than the milady media hover
         playTone(500, 0.05, "sine", 0.02);
       }
@@ -306,9 +305,9 @@ export function attachDMSounds(): void {
     const dmElement = target.closest(DM_CONVERSATION_PANEL) ||
                       target.closest(DM_MESSAGE);
 
-    if (dmElement && !soundsAttached.has(dmElement as HTMLElement)) {
+    if (dmElement && !soundsAttached.has(dmElement as HTMLElement) && getAudioContext(true)) {
       soundsAttached.add(dmElement as HTMLElement);
-      playTone(600, 0.06, "sine", 0.03);
+      playTone(600, 0.04, "sine", 0.03, 0, 0.01);
     }
   }, { passive: true });
 }
@@ -343,18 +342,24 @@ export function observeIncomingMessages(): void {
   observedMessageList = messageList;
   lastMessageCount = messageList.querySelectorAll(DM_MESSAGE).length;
 
+  let dmMutationTimer: ReturnType<typeof setTimeout> | null = null;
+
   dmObserver = new MutationObserver(() => {
-    if (!settings.soundEnabled || settings.mode === "off") return;
-    if (!document.hasFocus()) return;
+    // Debounce: Twitter may insert multiple nodes in rapid succession
+    if (dmMutationTimer) return;
+    dmMutationTimer = setTimeout(() => {
+      dmMutationTimer = null;
+      if (!settings.soundEnabled || settings.mode === "off") return;
+      if (!document.hasFocus()) return;
 
-    const currentCount = messageList.querySelectorAll(DM_MESSAGE).length;
+      const currentCount = messageList.querySelectorAll(DM_MESSAGE).length;
 
-    if (currentCount > lastMessageCount && lastMessageCount > 0) {
-      // New message(s) appeared — could be incoming or a reaction badge
-      playMessageBlip();
-    }
+      if (currentCount > lastMessageCount) {
+        playMessageBlip();
+      }
 
-    lastMessageCount = currentCount;
+      lastMessageCount = currentCount;
+    }, 100);
   });
 
   dmObserver.observe(messageList, {
