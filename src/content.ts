@@ -322,29 +322,15 @@ function applyMode(tweet: HTMLElement, normalizedUrl?: string): void {
   const isMatch = tweet.dataset.miladyShrinkifierState === "match";
 
   switch (settings.mode) {
-    case "hide":
-      if (!isMatch) {
-        revealed.delete(tweet);
-        clearPlaceholder(tweet);
-        tweet.style.display = "";
-        return;
-      }
-      if (normalizedUrl && revealed.get(tweet) === normalizedUrl) {
-        clearPlaceholder(tweet);
-        tweet.style.display = "";
-        return;
-      }
-      applyHiddenState(tweet);
-      return;
-    case "fade":
-      if (!isMatch) {
-        clearPlaceholder(tweet);
-        tweet.style.display = "";
-        return;
-      }
+    case "milady":
+      // Enhance milady posts, diminish non-milady posts
       clearPlaceholder(tweet);
-      tweet.dataset.miladyShrinkifierEffect = "fade";
       tweet.style.display = "";
+      if (isMatch) {
+        tweet.dataset.miladyShrinkifierEffect = "milady";
+        return;
+      }
+      tweet.dataset.miladyShrinkifierEffect = "diminish";
       return;
     case "debug":
       clearPlaceholder(tweet);
@@ -423,8 +409,254 @@ function injectStyles(): void {
   const style = document.createElement("style");
   style.id = STYLE_ID;
   style.textContent = `
-    [data-milady-shrinkifier-effect="fade"] {
-      opacity: 0.5;
+    /* Diminish effect - tighter margins, only fade content */
+    [data-milady-shrinkifier-effect="diminish"] {
+      margin-top: -4px !important;
+      margin-bottom: -4px !important;
+      padding-top: 8px !important;
+      padding-bottom: 8px !important;
+      transform: scale(0.98) !important;
+      transform-origin: center center !important;
+    }
+
+    /* Fade the tweet text and user info */
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="tweetText"],
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="User-Name"] {
+      opacity: 0.5 !important;
+    }
+
+    /* Fade images and media */
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="tweetPhoto"],
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="videoPlayer"],
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.wrapper"],
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.layoutLarge.media"],
+    [data-milady-shrinkifier-effect="diminish"] [aria-label*="Image"],
+    [data-milady-shrinkifier-effect="diminish"] img:not([src*="profile_images"]):not([src*="emoji"]) {
+      opacity: 0.5 !important;
+      transition: opacity 0.15s ease !important;
+    }
+
+    /* Restore full opacity on hover */
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="tweetPhoto"]:hover,
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="videoPlayer"]:hover,
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.wrapper"]:hover,
+    [data-milady-shrinkifier-effect="diminish"] [data-testid="card.layoutLarge.media"]:hover,
+    [data-milady-shrinkifier-effect="diminish"] [aria-label*="Image"]:hover,
+    [data-milady-shrinkifier-effect="diminish"] img:not([src*="profile_images"]):not([src*="emoji"]):hover {
+      opacity: 1 !important;
+    }
+
+    /* Sparkle animation */
+    @keyframes milady-sparkle {
+      0%, 100% {
+        opacity: 0;
+        transform: scale(0) rotate(0deg);
+      }
+      50% {
+        opacity: 1;
+        transform: scale(1) rotate(180deg);
+      }
+    }
+
+    @keyframes milady-shimmer {
+      0% {
+        background-position: -200% 0;
+      }
+      100% {
+        background-position: 200% 0;
+      }
+    }
+
+    /* MILADY effect - gold floating card */
+    [data-milady-shrinkifier-effect="milady"] {
+      position: relative !important;
+      z-index: 1 !important;
+      border-radius: 12px !important;
+      margin: 8px 8px !important;
+      border: 1px solid rgba(212, 175, 55, 0.3) !important;
+      box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.06),
+        0 4px 12px rgba(212, 175, 55, 0.1),
+        inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
+    }
+
+    /* Connected milady tweets - merge adjacent cards */
+    [data-milady-shrinkifier-effect="milady"] + [data-milady-shrinkifier-effect="milady"],
+    [data-milady-shrinkifier-effect="milady"] + [data-milady-shrinkifier-effect="diminish"] + [data-milady-shrinkifier-effect="milady"] {
+      margin-top: -7px !important;
+      border-top-left-radius: 0 !important;
+      border-top-right-radius: 0 !important;
+      border-top: none !important;
+    }
+
+    [data-milady-shrinkifier-effect="milady"]:has(+ [data-milady-shrinkifier-effect="milady"]) {
+      border-bottom-left-radius: 0 !important;
+      border-bottom-right-radius: 0 !important;
+      margin-bottom: 0 !important;
+    }
+
+    /* Gold metallic sheen overlay */
+    [data-milady-shrinkifier-effect="milady"]::before {
+      content: "" !important;
+      position: absolute !important;
+      inset: 0 !important;
+      border-radius: 12px !important;
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255, 215, 0, 0.15) 0%,
+          rgba(212, 175, 55, 0.05) 20%,
+          rgba(255, 255, 255, 0) 45%,
+          rgba(212, 175, 55, 0.03) 70%,
+          rgba(255, 215, 0, 0.12) 100%
+        ) !important;
+      pointer-events: none !important;
+      z-index: 1 !important;
+    }
+
+    /* Shimmer effect overlay */
+    [data-milady-shrinkifier-effect="milady"]::after {
+      content: "" !important;
+      position: absolute !important;
+      inset: 0 !important;
+      border-radius: 12px !important;
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 215, 0, 0.08) 25%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 215, 0, 0.08) 75%,
+        rgba(255, 255, 255, 0) 100%
+      ) !important;
+      background-size: 200% 100% !important;
+      animation: milady-shimmer 6s ease-in-out infinite !important;
+      pointer-events: none !important;
+      z-index: 2 !important;
+    }
+
+    /* Light mode - gold sheen */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-milady-shrinkifier-effect="milady"]::before,
+    body[style*="background-color: rgb(255, 255, 255)"] [data-milady-shrinkifier-effect="milady"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(212, 175, 55, 0.12) 0%,
+          rgba(255, 223, 100, 0.2) 15%,
+          rgba(255, 255, 255, 0) 40%,
+          rgba(212, 175, 55, 0.05) 65%,
+          rgba(255, 215, 0, 0.15) 85%,
+          rgba(184, 134, 11, 0.08) 100%
+        ) !important;
+    }
+
+    /* Light mode - warm gold tint */
+    [data-milady-shrinkifier-effect="milady"] {
+      background: linear-gradient(180deg, rgba(255, 252, 240, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+    }
+
+    /* Dark mode fallback - gold glow */
+    @media (prefers-color-scheme: dark) {
+      [data-milady-shrinkifier-effect="milady"] {
+        background: rgba(28, 30, 34, 1) !important;
+        border-color: rgba(212, 175, 55, 0.3) !important;
+        box-shadow:
+          0 0 1px rgba(255, 215, 0, 0.4),
+          0 0 10px rgba(212, 175, 55, 0.15),
+          0 0 24px rgba(255, 215, 0, 0.08),
+          inset 0 1px 0 rgba(255, 215, 0, 0.12) !important;
+      }
+    }
+
+    /* Twitter Light mode - gold accents */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-milady-shrinkifier-effect="milady"],
+    body[style*="background-color: rgb(255, 255, 255)"] [data-milady-shrinkifier-effect="milady"] {
+      background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      border-color: rgba(212, 175, 55, 0.3) !important;
+      box-shadow:
+        0 2px 4px rgba(184, 134, 11, 0.08),
+        0 4px 12px rgba(212, 175, 55, 0.12),
+        inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
+    }
+
+    /* Twitter Dim mode (dark blue) - gold glow */
+    html[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"],
+    body[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"] {
+      background: rgba(28, 42, 56, 1) !important;
+      border-color: rgba(212, 175, 55, 0.7) !important;
+      box-shadow:
+        0 0 2px rgba(255, 215, 0, 0.6),
+        0 0 12px rgba(212, 175, 55, 0.35),
+        0 0 24px rgba(255, 215, 0, 0.15),
+        inset 0 1px 0 rgba(255, 215, 0, 0.25) !important;
+    }
+
+    /* Twitter Dark mode (black) - gold glow */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"] {
+      background: rgba(20, 22, 26, 1) !important;
+      border-color: rgba(212, 175, 55, 0.8) !important;
+      box-shadow:
+        0 0 2px rgba(255, 215, 0, 0.7),
+        0 0 14px rgba(212, 175, 55, 0.4),
+        0 0 28px rgba(255, 215, 0, 0.18),
+        inset 0 1px 0 rgba(255, 215, 0, 0.3) !important;
+    }
+
+    /* Gold metallic sheen - dim mode */
+    html[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"]::before,
+    body[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255, 215, 0, 0.12) 0%,
+          rgba(212, 175, 55, 0.04) 25%,
+          rgba(255, 255, 255, 0) 50%,
+          rgba(212, 175, 55, 0.03) 75%,
+          rgba(255, 215, 0, 0.1) 100%
+        ) !important;
+    }
+
+    /* Gold metallic sheen - dark mode */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"]::before,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"]::before {
+      background:
+        linear-gradient(
+          135deg,
+          rgba(255, 215, 0, 0.15) 0%,
+          rgba(212, 175, 55, 0.05) 25%,
+          rgba(255, 255, 255, 0) 50%,
+          rgba(212, 175, 55, 0.04) 75%,
+          rgba(255, 215, 0, 0.12) 100%
+        ) !important;
+    }
+
+    /* HDR effect on Milady avatars */
+    [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"] img,
+    [data-milady-shrinkifier-effect="milady"] img[src*="profile_images"] {
+      filter:
+        contrast(1.08)
+        saturate(1.25)
+        brightness(1.05) !important;
+      image-rendering: high-quality !important;
+    }
+
+    /* Gold glow behind the avatar */
+    [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"] {
+      filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.3)) !important;
+    }
+
+    /* Stronger gold glow in dark modes */
+    @media (prefers-color-scheme: dark) {
+      [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"] {
+        filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.35)) !important;
+      }
+    }
+
+    html[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"],
+    html[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"],
+    body[style*="background-color: rgb(21, 32, 43)"] [data-milady-shrinkifier-effect="milady"] [data-testid="Tweet-User-Avatar"] {
+      filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.4)) !important;
     }
 
     [data-milady-shrinkifier-effect="debug-match"] {
@@ -651,7 +883,7 @@ async function scoreWithOnnx(
 }
 
 function isFilterMode(value: unknown): value is ExtensionSettings["mode"] {
-  return value === "off" || value === "hide" || value === "fade" || value === "debug";
+  return value === "off" || value === "milady" || value === "debug";
 }
 
 function incrementMatchStats(result: DetectionResult): void {
