@@ -99,54 +99,37 @@ export function clearEffects(tweet: HTMLElement): void {
   tweet.style.display = "";
 }
 
-export function hasLowLikes(tweet: HTMLElement): boolean {
-  const likeButton = tweet.querySelector<HTMLElement>(LIKE_BUTTON);
-  if (!likeButton) return false;
+function getLikeCount(tweet: HTMLElement): number {
+  // Check both like (not yet liked) and unlike (already liked) buttons
+  const button = tweet.querySelector<HTMLElement>(LIKE_BUTTON) ||
+                 tweet.querySelector<HTMLElement>(UNLIKE_BUTTON);
+  if (!button) return -1;
 
-  // Check aria-label for like count
-  const ariaLabel = likeButton.getAttribute("aria-label") || "";
-  if (ariaLabel === "Like" || ariaLabel === "Likes") {
-    return true; // No count means 0
-  }
-
-  // Try to extract number from aria-label (e.g., "5 Likes")
-  const ariaMatch = ariaLabel.match(/^(\d+)\s/);
+  // Parse from aria-label (e.g., "123 Likes. Like" or "5 Likes. Unlike")
+  const ariaLabel = button.getAttribute("aria-label") || "";
+  const ariaMatch = ariaLabel.match(/^([\d,.]+)\s/);
   if (ariaMatch) {
-    const count = parseInt(ariaMatch[1], 10);
-    return count < 10;
+    return parseCount(ariaMatch[1].replace(/,/g, ""));
   }
 
-  // Check for visible text count
-  const countSpan = likeButton.querySelector(LIKE_COUNT);
-  if (!countSpan) return true; // No count element means 0
+  // No number prefix means 0 likes
+  if (/^(Like|Unlike|Likes)/.test(ariaLabel)) return 0;
+
+  // Fallback: visible text count
+  const countSpan = button.querySelector(LIKE_COUNT);
+  if (!countSpan) return 0;
 
   const countText = countSpan.textContent?.trim();
-  if (!countText) return true;
+  return countText ? parseCount(countText) : 0;
+}
 
-  // Parse the count (handles "1.2K" etc)
-  const count = parseCount(countText);
-  return count < 10;
+export function hasLowLikes(tweet: HTMLElement): boolean {
+  const count = getLikeCount(tweet);
+  return count >= 0 && count < 10;
 }
 
 export function hasHighLikes(tweet: HTMLElement): boolean {
-  const likeButton = tweet.querySelector<HTMLElement>(LIKE_BUTTON);
-  if (!likeButton) return false;
-
-  const ariaLabel = likeButton.getAttribute("aria-label") || "";
-  if (ariaLabel === "Like" || ariaLabel === "Likes") return false;
-
-  const ariaMatch = ariaLabel.match(/^(\d[\d,.]*)\s/);
-  if (ariaMatch) {
-    return parseCount(ariaMatch[1].replace(/,/g, "")) >= 100;
-  }
-
-  const countSpan = likeButton.querySelector(LIKE_COUNT);
-  if (!countSpan) return false;
-
-  const countText = countSpan.textContent?.trim();
-  if (!countText) return false;
-
-  return parseCount(countText) >= 100;
+  return getLikeCount(tweet) >= 100;
 }
 
 export function hasUserLiked(tweet: HTMLElement): boolean {
