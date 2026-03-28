@@ -318,14 +318,23 @@ export function attachDMSounds(): void {
 
 
 // Poll for new DM messages by tracking seen message UUIDs.
-// Self-starting: runs a global 2s interval that checks if we're on a DM page.
+// Self-starting: runs a global 500ms interval that checks if we're on a DM page.
+// Suppresses the pip for 2s after any user interaction to avoid false positives
+// caused by Twitter regenerating DOM nodes with new UUIDs on re-render.
 const seenMessageIds = new Set<string>();
 let dmPollStarted = false;
 let wasInDMs = false;
+let lastUserInteraction = 0;
 
 export function observeIncomingMessages(): void {
   if (dmPollStarted) return;
   dmPollStarted = true;
+
+  // Track user interactions to suppress false pips
+  const markInteraction = () => { lastUserInteraction = Date.now(); };
+  document.addEventListener("click", markInteraction, { passive: true, capture: true });
+  document.addEventListener("keydown", markInteraction, { passive: true, capture: true });
+  document.addEventListener("scroll", markInteraction, { passive: true, capture: true });
 
   setInterval(() => {
     const inDMs = window.location.pathname.includes("/messages") ||
@@ -339,9 +348,10 @@ export function observeIncomingMessages(): void {
       return;
     }
 
+    // Seed on first poll after entering DMs
     if (!wasInDMs) {
-      // Just entered DMs — seed with all visible message IDs
       wasInDMs = true;
+      lastUserInteraction = Date.now();
       for (const msg of Array.from(document.querySelectorAll(DM_MESSAGE))) {
         const id = msg.getAttribute("data-testid");
         if (id) seenMessageIds.add(id);
@@ -351,6 +361,16 @@ export function observeIncomingMessages(): void {
 
     if (!settings.soundEnabled || settings.mode === "off") return;
     if (!document.hasFocus()) return;
+
+    // Suppress pip for 2s after user interaction (Twitter re-renders create new UUIDs)
+    if (Date.now() - lastUserInteraction < 2000) {
+      // Still update the seen set so we don't false-trigger after cooldown
+      for (const msg of Array.from(document.querySelectorAll(DM_MESSAGE))) {
+        const id = msg.getAttribute("data-testid");
+        if (id) seenMessageIds.add(id);
+      }
+      return;
+    }
 
     let hasNew = false;
     for (const msg of Array.from(document.querySelectorAll(DM_MESSAGE))) {
