@@ -1,3 +1,4 @@
+import { getLevel, getLevelProgress } from "./shared/levels";
 import { parseCount } from "./shared/parse-count";
 import {
   TWEET,
@@ -11,6 +12,7 @@ import {
   FOLLOWING_INDICATOR,
   FOLLOWS_YOU_INDICATOR,
   THREAD_CONNECTOR,
+  USER_NAME,
 } from "./selectors";
 import type { ExtensionSettings } from "./shared/types";
 
@@ -23,6 +25,13 @@ export interface EffectsContext {
   settings: ExtensionSettings;
   processed: WeakMap<HTMLElement, string>;
   onTweetVisible: (tweet: HTMLElement) => void;
+  onCatch: (handle: string) => void;
+  onLevelUp: (handle: string, newLevel: number) => void;
+  onUnlike: (handle: string) => void;
+  onAddToMiladyList: (handle: string) => void;
+  onRemoveFromMiladyList: (handle: string) => void;
+  isAccountCaught: (handle: string) => boolean;
+  getAccountPostsLiked: (handle: string) => number;
 }
 
 // ---------------------------------------------------------------------------
@@ -30,9 +39,12 @@ export interface EffectsContext {
 // ---------------------------------------------------------------------------
 
 const placeholders = new WeakMap<HTMLElement, HTMLDivElement>();
+const levelBadges = new WeakMap<HTMLElement, HTMLSpanElement>();
+const miladyListButtons = new WeakMap<HTMLElement, HTMLButtonElement>();
 export const revealed = new WeakMap<HTMLElement, string>();
 let miladyLikesThisSession = 0;
 const countedLikes = new WeakSet<HTMLElement>();
+const xpCreditedKeys = new Set<string>();
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -81,7 +93,6 @@ export function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerDiamond;
   delete tweet.dataset.miladymaxxerNoLikes;
   delete tweet.dataset.miladymaxxerLiked;
-  delete tweet.dataset.miladymaxxerFollowing;
 }
 
 export function clearPlaceholder(tweet: HTMLElement): void {
@@ -170,8 +181,184 @@ export function doesUserFollow(tweet: HTMLElement): boolean {
     return false;
   }
 
-  // Default: assume NOT following to show the underline indicator
+  // No follow-related buttons found — assume not following
   return false;
+}
+
+const XP_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000; // 14 days
+
+function isTweetTooOldForXP(tweet: HTMLElement): boolean {
+  const timeEl = tweet.querySelector("time");
+  const datetime = timeEl?.getAttribute("datetime");
+  if (!datetime) return false;
+  const age = Date.now() - new Date(datetime).getTime();
+  return age > XP_MAX_AGE_MS;
+}
+
+function updateMiladyListButton(ctx: EffectsContext, tweet: HTMLElement): void {
+  const handle = tweet.dataset.miladymaxxerHandle;
+
+  if (!handle || ctx.settings.mode !== "milady") {
+    removeMiladyListButton(tweet);
+    return;
+  }
+
+  const isOnList = ctx.settings.miladyListHandles.includes(handle);
+  const isMiss = tweet.dataset.miladymaxxerState === "miss";
+
+  // Show "+" on non-milady tweets, or "-" on manually-added milady tweets
+  if (!isMiss && !isOnList) {
+    removeMiladyListButton(tweet);
+    return;
+  }
+
+  let btn = miladyListButtons.get(tweet);
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.className = "miladymaxxer-add-btn";
+    btn.type = "button";
+    miladyListButtons.set(tweet, btn);
+  }
+
+  // Re-bind click handler every time so it captures current ctx
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const h = tweet.dataset.miladymaxxerHandle;
+    if (!h) return;
+    if (btn!.dataset.miladyListState === "remove") {
+      ctx.onRemoveFromMiladyList(h);
+    } else {
+      ctx.onAddToMiladyList(h);
+    }
+  };
+
+  // Update button appearance based on list state
+  if (isOnList) {
+    btn.textContent = "\u2212"; // minus sign
+    btn.title = `Remove @${handle} from milady list`;
+    btn.dataset.miladyListState = "remove";
+  } else {
+    btn.textContent = "+";
+    btn.title = `Add @${handle} to milady list`;
+    btn.dataset.miladyListState = "add";
+  }
+
+  if (!btn.isConnected) {
+    // Place after the level badge if it exists
+    const existingBadge = levelBadges.get(tweet);
+    if (existingBadge?.isConnected) {
+      existingBadge.after(btn);
+    } else {
+      // Use the same injection logic as the level badge
+      injectInlineElement(tweet, btn);
+    }
+  }
+}
+
+function removeMiladyListButton(tweet: HTMLElement): void {
+  const btn = miladyListButtons.get(tweet);
+  if (btn) {
+    btn.remove();
+    miladyListButtons.delete(tweet);
+  }
+}
+
+function xpKeyForTweet(handle: string, tweet: HTMLElement): string | null {
+  const statusLink = tweet.querySelector<HTMLAnchorElement>('a[href*="/status/"]');
+  const href = statusLink?.getAttribute("href");
+  return href ? `${handle}:${href}` : handle;
+}
+
+function asciiProgressBar(current: number, needed: number, width: number = 3): string {
+  const filled = needed > 0 ? Math.round((current / needed) * width) : 0;
+  return "\u2593".repeat(filled) + "\u2591".repeat(width - filled);
+}
+
+function findTopUserName(tweet: HTMLElement): HTMLElement | null {
+  const userNames = tweet.querySelectorAll<HTMLElement>(USER_NAME);
+  for (const el of Array.from(userNames)) {
+    if (!el.closest('[data-testid="quoteTweet"]')) {
+      return el;
+    }
+  }
+  return null;
+}
+
+function injectInlineElement(tweet: HTMLElement, element: HTMLElement): void {
+  const topUserName = findTopUserName(tweet);
+  if (!topUserName) return;
+
+  // Timeline view: timestamp is inside User-Name row
+  const timeEl = topUserName.querySelector("time");
+  if (timeEl) {
+    const anchor = timeEl.closest("a") ?? timeEl.parentElement;
+    if (anchor?.parentElement) {
+      anchor.parentElement.appendChild(element);
+      return;
+    }
+  }
+
+  // Detail view: place after the @handle span
+  const allSpans = topUserName.querySelectorAll("span");
+  for (const span of Array.from(allSpans)) {
+    if (span.textContent?.trim()?.startsWith("@") && span.children.length === 0) {
+      span.after(element);
+      return;
+    }
+  }
+}
+
+function updateLevelBadge(ctx: EffectsContext, tweet: HTMLElement): void {
+  const handle = tweet.dataset.miladymaxxerHandle;
+  if (!handle || !ctx.settings.showLevelBadge || !ctx.isAccountCaught(handle)) {
+    removeLevelBadge(tweet);
+    return;
+  }
+
+  const postsLiked = ctx.getAccountPostsLiked(handle);
+  const progress = getLevelProgress(postsLiked);
+  if (progress.level < 1) {
+    removeLevelBadge(tweet);
+    return;
+  }
+
+  let badge = levelBadges.get(tweet);
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.className = "miladymaxxer-level-inline";
+    levelBadges.set(tweet, badge);
+  }
+
+  badge.textContent = ` \u00b7 Lv.${progress.level} ${asciiProgressBar(progress.current, progress.needed)}`;
+
+  if (!badge.isConnected) {
+    injectInlineElement(tweet, badge);
+  }
+}
+
+function removeLevelBadge(tweet: HTMLElement): void {
+  const badge = levelBadges.get(tweet);
+  if (badge) {
+    badge.remove();
+    levelBadges.delete(tweet);
+  }
+}
+
+function triggerCatchAnimation(tweet: HTMLElement): void {
+  if (tweet.dataset.miladymaxxerCatchAnim) return;
+  tweet.dataset.miladymaxxerCatchAnim = "catch";
+  tweet.addEventListener("animationend", () => {
+    delete tweet.dataset.miladymaxxerCatchAnim;
+  }, { once: true });
+}
+
+export function triggerLevelUpAnimation(tweet: HTMLElement): void {
+  if (tweet.dataset.miladymaxxerCatchAnim) return;
+  tweet.dataset.miladymaxxerCatchAnim = "levelup";
+  tweet.addEventListener("animationend", () => {
+    delete tweet.dataset.miladymaxxerCatchAnim;
+  }, { once: true });
 }
 
 export function applyHiddenState(ctx: EffectsContext, tweet: HTMLElement): void {
@@ -235,13 +422,24 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
         } else {
           delete tweet.dataset.miladymaxxerNoLikes;
         }
-        // Check if user has liked - slightly more gold
+        // Check if user has liked - slightly more gold, trigger catch/level-up
         if (hasUserLiked(tweet)) {
           tweet.dataset.miladymaxxerLiked = "true";
           if (!countedLikes.has(tweet)) {
             countedLikes.add(tweet);
             miladyLikesThisSession += 1;
             updateBadge(miladyLikesThisSession);
+            const handle = tweet.dataset.miladymaxxerHandle;
+            const xpKey = handle ? xpKeyForTweet(handle, tweet) : null;
+            if (handle && xpKey && !isTweetTooOldForXP(tweet) && !xpCreditedKeys.has(xpKey)) {
+              xpCreditedKeys.add(xpKey);
+              if (!ctx.isAccountCaught(handle)) {
+                ctx.onCatch(handle);
+                triggerCatchAnimation(tweet);
+              } else {
+                ctx.onLevelUp(handle, 0);
+              }
+            }
           }
         } else {
           delete tweet.dataset.miladymaxxerLiked;
@@ -249,28 +447,36 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
             countedLikes.delete(tweet);
             miladyLikesThisSession = Math.max(0, miladyLikesThisSession - 1);
             updateBadge(miladyLikesThisSession);
+            const handle = tweet.dataset.miladymaxxerHandle;
+            const xpKey = handle ? xpKeyForTweet(handle, tweet) : null;
+            if (handle && xpKey && !isTweetTooOldForXP(tweet) && xpCreditedKeys.has(xpKey)) {
+              xpCreditedKeys.delete(xpKey);
+              ctx.onUnlike(handle);
+            }
           }
         }
-        // Check if user follows this milady
-        if (doesUserFollow(tweet)) {
-          tweet.dataset.miladymaxxerFollowing = "true";
-        } else {
-          delete tweet.dataset.miladymaxxerFollowing;
-        }
+        updateLevelBadge(ctx, tweet);
+        updateMiladyListButton(ctx, tweet);
         return;
       }
+      removeLevelBadge(tweet);
+      updateMiladyListButton(ctx, tweet);
       tweet.dataset.miladymaxxerEffect = "diminish";
       delete tweet.dataset.miladyFadeIn;
       delete tweet.dataset.miladymaxxerNoLikes;
       delete tweet.dataset.miladymaxxerLiked;
       return;
     case "debug":
+      removeLevelBadge(tweet);
+      removeMiladyListButton(tweet);
       clearPlaceholder(tweet);
       applyDebugState(tweet);
       tweet.style.display = "";
       return;
     case "off":
     default:
+      removeLevelBadge(tweet);
+      removeMiladyListButton(tweet);
       clearPlaceholder(tweet);
       tweet.style.display = "";
   }

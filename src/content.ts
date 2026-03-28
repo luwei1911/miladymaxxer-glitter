@@ -1,4 +1,5 @@
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from "./shared/constants";
+import { getLevel } from "./shared/levels";
 import { normalizeProfileImageUrl } from "./shared/image-core";
 import {
   loadCollectedAvatars,
@@ -23,7 +24,7 @@ import type {
 } from "./shared/types";
 
 import { detectAvatar } from "./detection";
-import { applyMode, clearEffects, revealed } from "./effects";
+import { applyMode, clearEffects, revealed, triggerLevelUpAnimation } from "./effects";
 import type { EffectsContext } from "./effects";
 import {
   TWEET,
@@ -43,6 +44,8 @@ import {
   PRIMARY_COLUMN,
   HOME_LINK,
   LOGO_REPLACEMENT_CLASS,
+  SELF_PROFILE_LINK,
+  REPLY_TO_LINK,
 } from "./selectors";
 import {
   setSoundSettings,
@@ -51,6 +54,8 @@ import {
   attachDMSounds,
   attachGlobalMediaHoverSounds,
   observeIncomingMessages,
+  playCatchSound,
+  playLevelUpSound,
 } from "./sounds";
 import { injectStyles } from "./styles";
 
@@ -74,6 +79,8 @@ let stats: DetectionStats | null = null;
 let matchedAccounts: MatchedAccountMap | null = null;
 let collectedAvatars: CollectedAvatarMap | null = null;
 let localStateWriteScheduled = false;
+let selfHandle: string | null = null;
+const creditedReplies = new WeakSet<HTMLElement>();
 
 // ---------------------------------------------------------------------------
 // Effects context — wires effects module to our shared state
@@ -84,6 +91,13 @@ function effectsCtx(): EffectsContext {
     settings,
     processed,
     onTweetVisible: attachSoundEvents,
+    onCatch: markAccountCaught,
+    onLevelUp: handleLevelUp,
+    onUnlike: handleUnlike,
+    onAddToMiladyList: addToMiladyList,
+    onRemoveFromMiladyList: removeFromMiladyList,
+    isAccountCaught: (handle: string) => matchedAccounts?.[handle]?.caught === true,
+    getAccountPostsLiked: (handle: string) => matchedAccounts?.[handle]?.postsLiked ?? 0,
   };
 }
 
@@ -124,6 +138,7 @@ async function boot(): Promise<void> {
     subtree: true,
   });
   window.addEventListener("scroll", scheduleDelayedProcessVisibleTweets, { passive: true });
+  document.addEventListener("click", () => scheduleDelayedProcessVisibleTweets(), { passive: true, capture: true });
   window.setInterval(() => {
     scheduleProcessVisibleTweets();
   }, RESCAN_INTERVAL_MS);
@@ -203,11 +218,21 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
     }
 
     if (processed.get(tweet) === normalizedUrl && tweet.dataset.miladymaxxerState) {
-      applyMode(effectsCtx(), tweet, normalizedUrl);
-      return;
+      // Re-check milady list in case it changed since last processing
+      if (author && settings.miladyListHandles.includes(author.handle) && tweet.dataset.miladymaxxerState !== "match") {
+        processed.delete(tweet);
+        // Fall through to re-process
+      } else {
+        applyMode(effectsCtx(), tweet, normalizedUrl);
+        return;
+      }
     }
 
     processed.set(tweet, normalizedUrl);
+
+    if (author) {
+      tweet.dataset.miladymaxxerHandle = author.handle;
+    }
 
     if (author && settings.whitelistHandles.includes(author.handle)) {
       recordCollectedAvatar({
@@ -223,6 +248,20 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
       clearEffects(tweet);
       delete tweet.dataset.miladymaxxer;
       delete tweet.dataset.miladymaxxerState;
+      return;
+    }
+
+    // Manual milady list — skip detection, treat as match
+    if (author && settings.miladyListHandles.includes(author.handle)) {
+      tweet.dataset.miladymaxxer = "manual";
+      tweet.dataset.miladymaxxerState = "match";
+      delete tweet.dataset.miladymaxxerDebug;
+      incrementStat("tweetsScanned");
+      incrementMatchStats({ matched: true, source: null, score: null, tokenId: null });
+      recordMatchedAccount(author.handle, author.displayName, null);
+      applyMode(effectsCtx(), tweet, normalizedUrl);
+      checkReplyXP(tweet, author);
+      processQuoteTweet(tweet);
       return;
     }
 
@@ -269,6 +308,7 @@ async function processTweet(tweet: HTMLElement): Promise<void> {
       tweet.dataset.miladymaxxerDebug = result.debugLabel;
     }
     applyMode(effectsCtx(), tweet, normalizedUrl);
+    checkReplyXP(tweet, author);
   } catch (error) {
     console.error("Milady post processing failed", error);
     clearEffects(tweet);
@@ -336,6 +376,18 @@ async function processProfilePage(): Promise<void> {
   if (processed.get(userProfileContainer as HTMLElement) === normalizedUrl) return;
   processed.set(userProfileContainer as HTMLElement, normalizedUrl);
 
+  // Extract profile handle from URL
+  const profileHandle = normalizeHandle(window.location.pathname.split("/")[1] ?? "");
+
+  // Manual milady list — skip detection for profile page too
+  if (profileHandle && settings.miladyListHandles.includes(profileHandle)) {
+    const primaryColumn = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
+    if (primaryColumn) {
+      primaryColumn.dataset.miladymaxxerProfile = "milady";
+    }
+    return;
+  }
+
   try {
     const result = await detectAvatar(avatar, normalizedUrl, {
       onCacheHit: () => incrementStat("cacheHits"),
@@ -372,6 +424,14 @@ async function processUserCell(cell: HTMLElement): Promise<void> {
 
   if (processed.get(cell) === normalizedUrl) return;
   processed.set(cell, normalizedUrl);
+
+  // Check milady list by extracting handle from the cell's profile link
+  const cellLink = cell.querySelector<HTMLAnchorElement>('a[href^="/"]');
+  const cellHandle = normalizeHandle(cellLink?.getAttribute("href"));
+  if (cellHandle && settings.miladyListHandles.includes(cellHandle)) {
+    cell.dataset.miladymaxxerEffect = "milady";
+    return;
+  }
 
   try {
     const result = await detectAvatar(avatar, normalizedUrl, {
@@ -494,6 +554,51 @@ function findAuthor(tweet: HTMLElement): { handle: string; displayName: string |
   };
 }
 
+function resolveSelfHandle(): string | null {
+  if (selfHandle) return selfHandle;
+  const link = document.querySelector<HTMLAnchorElement>(SELF_PROFILE_LINK);
+  const href = link?.getAttribute("href");
+  if (href) {
+    selfHandle = normalizeHandle(href);
+  }
+  return selfHandle;
+}
+
+function findReplyToHandle(tweet: HTMLElement): string | null {
+  const links = tweet.querySelectorAll<HTMLAnchorElement>(REPLY_TO_LINK);
+  for (const link of Array.from(links)) {
+    const text = link.textContent?.trim();
+    if (text?.startsWith("@")) {
+      return normalizeHandle(text);
+    }
+  }
+  return null;
+}
+
+function checkReplyXP(tweet: HTMLElement, author: { handle: string } | null): void {
+  if (!author || !matchedAccounts || creditedReplies.has(tweet)) return;
+
+  const self = resolveSelfHandle();
+  if (!self || author.handle !== self) return;
+
+  const replyTo = findReplyToHandle(tweet);
+  if (!replyTo) return;
+
+  const target = matchedAccounts[replyTo];
+  if (!target?.caught) return;
+
+  creditedReplies.add(tweet);
+
+  const prevLevel = getLevel(target.postsLiked);
+  target.postsLiked += 1;
+  const newLevel = getLevel(target.postsLiked);
+  scheduleLocalStateWrite();
+
+  if (newLevel > prevLevel) {
+    playLevelUpSound();
+  }
+}
+
 function extractDisplayName(userName: HTMLElement): string | null {
   for (const span of Array.from(userName.querySelectorAll("span"))) {
     const text = span.textContent?.trim();
@@ -565,6 +670,116 @@ function incrementStat(key: keyof Omit<DetectionStats, "lastMatchAt">): void {
   scheduleLocalStateWrite();
 }
 
+function markAccountCaught(handle: string): void {
+  if (!matchedAccounts) return;
+
+  const existing = matchedAccounts[handle];
+  if (!existing || existing.caught) return;
+
+  existing.caught = true;
+  existing.caughtAt = new Date().toISOString();
+  existing.postsLiked += 1;
+
+  scheduleLocalStateWrite();
+  playCatchSound();
+}
+
+function handleLevelUp(handle: string, _newLevel: number): void {
+  if (!matchedAccounts) return;
+
+  const existing = matchedAccounts[handle];
+  if (!existing || !existing.caught) return;
+
+  const prevLevel = getLevel(existing.postsLiked);
+  existing.postsLiked += 1;
+  const newLevel = getLevel(existing.postsLiked);
+
+  scheduleLocalStateWrite();
+
+  if (newLevel > prevLevel) {
+    playLevelUpSound();
+    // Find the tweet for this handle and trigger visual
+    const tweet = document.querySelector<HTMLElement>(
+      `[data-miladymaxxer-handle="${handle}"][data-miladymaxxer-state="match"]`,
+    );
+    if (tweet) {
+      triggerLevelUpAnimation(tweet);
+    }
+  }
+}
+
+function addToMiladyList(handle: string): void {
+  if (settings.miladyListHandles.includes(handle)) return;
+  settings = {
+    ...settings,
+    miladyListHandles: [...settings.miladyListHandles, handle],
+  };
+  chrome.storage.sync.set({ miladyListHandles: settings.miladyListHandles });
+
+  // Ensure the account exists in matchedAccounts so it shows in the popup
+  if (matchedAccounts && !matchedAccounts[handle]) {
+    matchedAccounts[handle] = {
+      handle,
+      displayName: null,
+      postsMatched: 0,
+      postsLiked: 0,
+      lastMatchedAt: new Date().toISOString(),
+      lastDetectionScore: null,
+      caught: true,
+      caughtAt: new Date().toISOString(),
+      verificationStatus: "unverified",
+    };
+    scheduleLocalStateWrite();
+  } else if (matchedAccounts?.[handle] && !matchedAccounts[handle].caught) {
+    matchedAccounts[handle].caught = true;
+    matchedAccounts[handle].caughtAt = matchedAccounts[handle].caughtAt ?? new Date().toISOString();
+    scheduleLocalStateWrite();
+  }
+
+  // Clear processed state and effects so tweets get re-evaluated as matches
+  for (const tweet of Array.from(document.querySelectorAll<HTMLElement>(`[data-miladymaxxer-handle="${handle}"]`))) {
+    processed.delete(tweet);
+    delete tweet.dataset.miladymaxxerState;
+    delete tweet.dataset.miladymaxxer;
+    clearEffects(tweet);
+  }
+  scheduleProcessVisibleTweets();
+}
+
+function removeFromMiladyList(handle: string): void {
+  if (!settings.miladyListHandles.includes(handle)) return;
+  settings = {
+    ...settings,
+    miladyListHandles: settings.miladyListHandles.filter((h) => h !== handle),
+  };
+  chrome.storage.sync.set({ miladyListHandles: settings.miladyListHandles });
+
+  // Uncatch the account so it disappears from the popup caught list
+  if (matchedAccounts?.[handle]) {
+    matchedAccounts[handle].caught = false;
+    scheduleLocalStateWrite();
+  }
+
+  // Clear processed state and effects so tweets get re-evaluated
+  for (const tweet of Array.from(document.querySelectorAll<HTMLElement>(`[data-miladymaxxer-handle="${handle}"]`))) {
+    processed.delete(tweet);
+    delete tweet.dataset.miladymaxxerState;
+    delete tweet.dataset.miladymaxxer;
+    clearEffects(tweet);
+  }
+  scheduleProcessVisibleTweets();
+}
+
+function handleUnlike(handle: string): void {
+  if (!matchedAccounts) return;
+
+  const existing = matchedAccounts[handle];
+  if (!existing || !existing.caught || existing.postsLiked <= 0) return;
+
+  existing.postsLiked = Math.max(0, existing.postsLiked - 1);
+  scheduleLocalStateWrite();
+}
+
 function recordMatchedAccount(handle: string, displayName: string | null, score: number | null): void {
   if (!matchedAccounts) return;
 
@@ -573,8 +788,12 @@ function recordMatchedAccount(handle: string, displayName: string | null, score:
     handle,
     displayName: displayName ?? existing?.displayName ?? null,
     postsMatched: (existing?.postsMatched ?? 0) + 1,
+    postsLiked: existing?.postsLiked ?? 0,
     lastMatchedAt: new Date().toISOString(),
     lastDetectionScore: score ?? existing?.lastDetectionScore ?? null,
+    caught: existing?.caught ?? false,
+    caughtAt: existing?.caughtAt ?? null,
+    verificationStatus: existing?.verificationStatus ?? "unverified",
   };
   scheduleLocalStateWrite();
 }
@@ -657,15 +876,20 @@ function isFilterMode(value: unknown): value is ExtensionSettings["mode"] {
 
 function observeStorage(): void {
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "sync" && (changes.mode || changes.whitelistHandles || changes.soundEnabled)) {
+    if (area === "sync" && (changes.mode || changes.whitelistHandles || changes.miladyListHandles || changes.soundEnabled || changes.showLevelBadge)) {
       const nextMode = changes.mode?.newValue;
       const nextSoundEnabled = changes.soundEnabled?.newValue;
+      const nextShowLevelBadge = changes.showLevelBadge?.newValue;
       settings = {
         mode: isFilterMode(nextMode) ? nextMode : settings.mode,
         whitelistHandles: normalizeWhitelistHandles(
           changes.whitelistHandles?.newValue ?? settings.whitelistHandles,
         ),
+        miladyListHandles: normalizeWhitelistHandles(
+          changes.miladyListHandles?.newValue ?? settings.miladyListHandles,
+        ),
         soundEnabled: typeof nextSoundEnabled === "boolean" ? nextSoundEnabled : settings.soundEnabled,
+        showLevelBadge: typeof nextShowLevelBadge === "boolean" ? nextShowLevelBadge : settings.showLevelBadge,
       };
       setSoundSettings(settings);
       scheduleProcessVisibleTweets();

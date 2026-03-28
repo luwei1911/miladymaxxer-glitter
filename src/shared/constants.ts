@@ -8,7 +8,9 @@ import type {
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   mode: "milady",
   whitelistHandles: [],
+  miladyListHandles: [],
   soundEnabled: true,
+  showLevelBadge: true,
 };
 
 export const DEFAULT_STATS: DetectionStats = {

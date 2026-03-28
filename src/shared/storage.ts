@@ -15,12 +15,16 @@ export async function loadSettings(): Promise<ExtensionSettings> {
   const stored = await chrome.storage.sync.get({
     mode: DEFAULT_SETTINGS.mode,
     whitelistHandles: DEFAULT_SETTINGS.whitelistHandles,
+    miladyListHandles: DEFAULT_SETTINGS.miladyListHandles,
     soundEnabled: DEFAULT_SETTINGS.soundEnabled,
+    showLevelBadge: DEFAULT_SETTINGS.showLevelBadge,
   });
   return {
     mode: isMode(stored.mode) ? stored.mode : DEFAULT_SETTINGS.mode,
     whitelistHandles: normalizeWhitelistHandles(stored.whitelistHandles),
+    miladyListHandles: normalizeWhitelistHandles(stored.miladyListHandles),
     soundEnabled: typeof stored.soundEnabled === "boolean" ? stored.soundEnabled : DEFAULT_SETTINGS.soundEnabled,
+    showLevelBadge: typeof stored.showLevelBadge === "boolean" ? stored.showLevelBadge : DEFAULT_SETTINGS.showLevelBadge,
   };
 }
 
@@ -28,7 +32,9 @@ export async function saveSettings(settings: ExtensionSettings): Promise<void> {
   await chrome.storage.sync.set({
     mode: settings.mode,
     whitelistHandles: normalizeWhitelistHandles(settings.whitelistHandles),
+    miladyListHandles: normalizeWhitelistHandles(settings.miladyListHandles),
     soundEnabled: settings.soundEnabled,
+    showLevelBadge: settings.showLevelBadge,
   });
 }
 
@@ -144,15 +150,24 @@ export function normalizeMatchedAccounts(value: unknown): MatchedAccountMap {
       continue;
     }
 
+    const verificationStatus = candidate.verificationStatus;
+
     normalized[handle] = {
       handle,
       displayName: typeof candidate.displayName === "string" ? candidate.displayName : null,
       postsMatched: readNumber(candidate.postsMatched),
+      postsLiked: readNumber(candidate.postsLiked),
       lastMatchedAt: typeof candidate.lastMatchedAt === "string" ? candidate.lastMatchedAt : null,
       lastDetectionScore:
         typeof candidate.lastDetectionScore === "number" && Number.isFinite(candidate.lastDetectionScore)
           ? candidate.lastDetectionScore
           : null,
+      caught: candidate.caught === true,
+      caughtAt: typeof candidate.caughtAt === "string" ? candidate.caughtAt : null,
+      verificationStatus:
+        verificationStatus === "verified" || verificationStatus === "unknown"
+          ? verificationStatus
+          : "unverified",
     };
   }
 

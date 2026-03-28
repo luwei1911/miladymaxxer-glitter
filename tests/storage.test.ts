@@ -223,8 +223,12 @@ describe("normalizeMatchedAccounts", () => {
         handle: "alice",
         displayName: "Alice W",
         postsMatched: 5,
+        postsLiked: 3,
         lastMatchedAt: "2026-01-01T00:00:00Z",
         lastDetectionScore: 0.95,
+        caught: true,
+        caughtAt: "2026-01-01T00:00:00Z",
+        verificationStatus: "unverified",
       },
     };
     const result = normalizeMatchedAccounts(input);
@@ -232,9 +236,59 @@ describe("normalizeMatchedAccounts", () => {
       handle: "alice",
       displayName: "Alice W",
       postsMatched: 5,
+      postsLiked: 3,
       lastMatchedAt: "2026-01-01T00:00:00Z",
       lastDetectionScore: 0.95,
+      caught: true,
+      caughtAt: "2026-01-01T00:00:00Z",
+      verificationStatus: "unverified",
     });
+  });
+
+  it("migrates legacy accounts without catch fields", () => {
+    const input = {
+      alice: {
+        handle: "alice",
+        displayName: "Alice",
+        postsMatched: 10,
+        lastMatchedAt: "2026-01-01T00:00:00Z",
+        lastDetectionScore: 0.9,
+      },
+    };
+    const result = normalizeMatchedAccounts(input);
+    expect(result.alice.caught).toBe(false);
+    expect(result.alice.caughtAt).toBeNull();
+    expect(result.alice.postsLiked).toBe(0);
+    expect(result.alice.verificationStatus).toBe("unverified");
+  });
+
+  it("preserves caught state on already-caught accounts", () => {
+    const input = {
+      alice: {
+        handle: "alice",
+        displayName: null,
+        postsMatched: 5,
+        postsLiked: 2,
+        lastMatchedAt: null,
+        lastDetectionScore: null,
+        caught: true,
+        caughtAt: "2026-02-15T12:00:00Z",
+        verificationStatus: "verified",
+      },
+    };
+    const result = normalizeMatchedAccounts(input);
+    expect(result.alice.caught).toBe(true);
+    expect(result.alice.caughtAt).toBe("2026-02-15T12:00:00Z");
+    expect(result.alice.postsLiked).toBe(2);
+    expect(result.alice.verificationStatus).toBe("verified");
+  });
+
+  it("defaults verificationStatus to unverified for invalid values", () => {
+    const input = {
+      alice: { handle: "alice", verificationStatus: "bogus" },
+    };
+    const result = normalizeMatchedAccounts(input);
+    expect(result.alice.verificationStatus).toBe("unverified");
   });
 
   it("coerces invalid lastDetectionScore to null", () => {

@@ -3,7 +3,9 @@ export type FilterMode = "off" | "milady" | "debug";
 export interface ExtensionSettings {
   mode: FilterMode;
   whitelistHandles: string[];
+  miladyListHandles: string[];
   soundEnabled: boolean;
+  showLevelBadge: boolean;
 }
 
 export interface DetectionStats {
@@ -16,12 +18,18 @@ export interface DetectionStats {
   lastMatchAt: string | null;
 }
 
+export type VerificationStatus = "unverified" | "verified" | "unknown";
+
 export interface MatchedAccount {
   handle: string;
   displayName: string | null;
   postsMatched: number;
+  postsLiked: number;
   lastMatchedAt: string | null;
   lastDetectionScore: number | null;
+  caught: boolean;
+  caughtAt: string | null;
+  verificationStatus: VerificationStatus;
 }
 
 export type MatchedAccountMap = Record<string, MatchedAccount>;
