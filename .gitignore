@@ -6,3 +6,5 @@ cache
 .playwright-chrome-profile
 .cdp-chrome-profile
 wandb
+__pycache__
+test-results
