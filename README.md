@@ -4,41 +4,42 @@
 
 ![Timeline](assets/screenshot-timeline-1.png)
 
-Chrome extension for X/Twitter. Runs a bundled ONNX classifier on avatars as you scroll. Milady posts get elevated, everything else gets diminished. Fully on-device — no server calls, no telemetry.
+Chrome extension for X/Twitter. Runs a bundled ONNX classifier on avatars as you scroll. Milady posts get highlighted. Fully local — no server calls, no telemetry.
 
 ## Features
 
-**Visual effects**
-- Gold floating cards on milady posts, silver on 0-like posts
-- Smooth animated transition on like (silver → gold, gold → richer gold)
-- Hover float animation on milady cards
-- Gold shimmer overlay and metallic sheen
-- Gold "Follow back" / silver "Follow" buttons
-- Gold-rimmed profile avatars with HDR enhancement
+**Tiered metallic cards**
+- Silver under 10 likes — encourages engagement
+- Gold above 10 likes
+- Diamond above 100 likes — icy crystalline shimmer
+- Smooth animated transition between tiers on like
+- Hover float animation
+- Dark mode and light mode optimized
+
+**Engagement nudges**
+- Faded pink like button on milady posts
+- Downvote button hidden on milady posts
 - Dotted underline on miladys you don't follow
-- Faded pink like button to encourage engagement
-- Hides downvote button on milady posts
-- Non-milady posts slightly shrunk and faded
-- Dark mode: warm gold / cool silver tinting with depth shadows
-- Light mode: subtle cream/champagne card tinting
-- Quote tweet detection — gold card when a milady is quoted
+- Gold "Follow back" / silver "Follow" buttons
+- Badge counter for milady posts liked this session
 
 **Sound**
-- Detection chime when milady avatars are found
-- Media hover pips, click feedback
-- DM send thup, incoming message pip
+- Generative polyphonic interaction sounds across the site
+- Detection chimes, media hover pips, click feedback
+- DM send, incoming message, conversation sounds
 - Toggle on/off in popup
 
 **Popup**
 - Session stats: posts scanned, match rate, last detection
-- Account list with per-account exemptions
+- Navigate to seen milady profiles from session
+- Per-account exemptions
 - Avatar dataset export for offline labeling
-- Green theme matching miladymaker.net
+- miladymaker.net green theme
 
 **Other**
-- Badge counter for milady posts liked this session
-- Debug mode with detection scores and markers
-- Works in timelines, threads, profiles, "Who to follow", notifications
+- All censorship filters removed
+- Works in timelines, threads, profiles, "Who to follow", notifications, DMs
+- Debug mode with detection scores
 
 ## Screenshots
 
@@ -71,9 +72,9 @@ See `DEVELOPMENT.md` for model training and debugging workflows.
 src/
   content.ts     # orchestrator — scroll observer, detection loop, stats
   styles.ts      # injected CSS — cards, dark mode, hover, transitions
-  sounds.ts      # Web Audio API — chimes, DM sounds, hover pips
+  sounds.ts      # Web Audio API — polyphonic sound system
   detection.ts   # ONNX inference and avatar classification
-  effects.ts     # DOM effects — milady/diminish, fade-ins, badges
+  effects.ts     # DOM effects — tiered cards, fade-ins, badges
   selectors.ts   # centralized DOM selector constants
   popup.tsx      # extension popup UI (Solid.js)
 ```
