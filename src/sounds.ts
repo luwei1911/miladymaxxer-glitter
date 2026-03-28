@@ -346,7 +346,7 @@ export function observeIncomingMessages(): void {
     }
 
     if (!settings.soundEnabled || settings.mode === "off") return;
-    if (!document.hasFocus()) return;
+    if (document.hidden) return;
 
     // Suppress pip for 2s after user interaction (Twitter re-renders create new UUIDs)
     if (Date.now() - lastUserInteraction < 2000) {
