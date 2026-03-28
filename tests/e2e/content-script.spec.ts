@@ -1,11 +1,12 @@
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { test, expect } from "./fixtures";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-const MOCK_PAGE_PATH = path.resolve(__dirname, "mock-twitter.html");
+const MOCK_PAGE_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "mock-twitter.html");
 
 /**
  * Navigate to the mock Twitter page through a URL the content script will

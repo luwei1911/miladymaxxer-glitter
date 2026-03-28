@@ -1,12 +1,13 @@
 import { type BrowserContext, chromium, test as base } from "@playwright/test";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 // ---------------------------------------------------------------------------
 // Fixture that launches Chromium with the extension loaded from dist/.
 // Reference: https://playwright.dev/docs/chrome-extensions
 // ---------------------------------------------------------------------------
 
-const EXTENSION_PATH = path.resolve(__dirname, "../../dist");
+const EXTENSION_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../dist");
 
 export const test = base.extend<{
   context: BrowserContext;
