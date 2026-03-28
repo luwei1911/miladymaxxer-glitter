@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Miladymaxxer",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "Elevate milady. Diminish the rest. On-device avatar detection for X.",
   "permissions": ["storage", "unlimitedStorage"],
   "host_permissions": ["https://x.com/*", "https://twitter.com/*"],

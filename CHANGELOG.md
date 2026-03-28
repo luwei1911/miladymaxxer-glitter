@@ -2,6 +2,36 @@
 
 All notable changes to Miladymaxxer will be documented in this file.
 
+## [0.3.0] - 2026-03-27
+
+### Added
+- Badge icon showing milady posts liked this session
+- Subtle hover float animation on milady cards (translateY + scale)
+- Smooth animated transition when liking a post (silver→gold, gold→richer gold)
+- DM sound effects — send thup, incoming message pip, conversation hover sounds
+- Unit tests for LRU cache, parseCount, and storage modules
+- E2E test infrastructure with Playwright
+
+### Changed
+- Popup redesigned with miladymaker.net green palette (#2f4d0c forest green, #d9f0d6 sage)
+- Popup always renders light green theme regardless of OS dark/light mode
+- Dark mode card styling reworked — warm gold tint backgrounds with soft downward light-shadow for depth instead of neon glow
+- Dark mode silver cards use cool blue-tinted backgrounds with subtle depth shadows
+- Dark mode liked posts visibly richer than base gold (animated transition on like)
+- Light mode liked posts ~30% deeper gold than base (not the heavy saturated gold from before)
+- Fade-in gradient for milady replies after non-milady tweets extended from 3% to 5%
+- Refactored content.ts into separate modules: sounds.ts, styles.ts, detection.ts, effects.ts, selectors.ts
+- Centralized all DOM selectors into selectors.ts
+- Extracted shared modules and deduplicated storage logic
+
+### Fixed
+- AudioContext warning: hover sounds no longer attempt to create/resume AudioContext before a user gesture
+- Badge background color: use valid hex `#00000000` instead of unsupported `"transparent"`
+- Silver card bottom border glitch: changed 1.5px border to 1px to avoid subpixel rendering artifacts
+- Layout shift on page load: removed margin/padding changes from milady and diminish effects
+- DM message detection: poll-based approach instead of MutationObserver for reliability across React re-renders
+- DM page detection: support both /messages and /i/chat paths
+
 ## [0.2.4] - 2026-03-27
 
 ### Added
