@@ -268,65 +268,85 @@ export function injectStyles(): void {
         inset 0 1px 0 rgba(220, 180, 70, 0.16) !important;
     }
 
-    /* Diamond tier - 100+ likes, icy crystalline look */
-    [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"] {
-      background: linear-gradient(135deg, #f0f4ff 0%, #e8eeff 25%, #f8faff 50%, #e0eaff 75%, #f0f4ff 100%) !important;
-      background-size: 400% 400% !important;
-      animation: milady-diamond-shimmer 6s ease infinite !important;
-      border: 1.5px solid rgba(160, 180, 220, 0.6) !important;
-      box-shadow:
-        0 4px 12px rgba(100, 140, 200, 0.15),
-        0 8px 30px rgba(120, 160, 220, 0.1),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9),
-        inset 0 -1px 0 rgba(160, 180, 220, 0.15) !important;
-    }
-
-    [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::before {
-      background: linear-gradient(
-        135deg,
-        rgba(200, 215, 255, 0.3) 0%,
-        rgba(180, 200, 255, 0.15) 25%,
-        rgba(255, 255, 255, 0) 50%,
-        rgba(190, 210, 255, 0.1) 75%,
-        rgba(200, 215, 255, 0.2) 100%
-      ) !important;
-    }
-
+    /* Diamond tier - 100+ likes */
     @keyframes milady-diamond-shimmer {
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
     }
 
+    @keyframes milady-diamond-sparkle {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    /* Diamond light mode */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"],
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"] {
+      background: linear-gradient(135deg, #eef2ff 0%, #dce4ff 20%, #f4f6ff 40%, #d8e2ff 60%, #edf1ff 80%, #dce4ff 100%) !important;
+      background-size: 300% 300% !important;
+      animation: milady-diamond-shimmer 4s ease infinite !important;
+      border: 1.5px solid rgba(130, 160, 230, 0.5) !important;
+      box-shadow:
+        0 4px 16px rgba(80, 120, 200, 0.2),
+        0 8px 32px rgba(100, 140, 220, 0.15),
+        0 0 20px rgba(130, 170, 255, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.95),
+        inset 0 -2px 4px rgba(130, 160, 230, 0.08) !important;
+    }
+
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::before,
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::before {
+      background: linear-gradient(
+        135deg,
+        rgba(180, 200, 255, 0.4) 0%,
+        rgba(220, 230, 255, 0.2) 30%,
+        rgba(255, 255, 255, 0.6) 50%,
+        rgba(200, 215, 255, 0.2) 70%,
+        rgba(180, 200, 255, 0.35) 100%
+      ) !important;
+      animation: milady-diamond-sparkle 3s ease-in-out infinite !important;
+    }
+
     /* Diamond dark mode */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"] {
-      background: linear-gradient(135deg, rgb(20, 25, 45) 0%, rgb(28, 35, 58) 25%, rgb(22, 28, 48) 50%, rgb(30, 38, 62) 75%, rgb(20, 25, 45) 100%) !important;
-      background-size: 400% 400% !important;
-      animation: milady-diamond-shimmer 6s ease infinite !important;
-      border: 1.5px solid rgba(120, 150, 220, 0.4) !important;
+      background: linear-gradient(135deg, rgb(15, 20, 42) 0%, rgb(22, 30, 55) 20%, rgb(18, 24, 48) 40%, rgb(25, 34, 60) 60%, rgb(15, 20, 42) 80%, rgb(22, 30, 55) 100%) !important;
+      background-size: 300% 300% !important;
+      animation: milady-diamond-shimmer 4s ease infinite !important;
+      border: 1.5px solid rgba(100, 140, 220, 0.45) !important;
       box-shadow:
-        0 4px 12px rgba(0, 0, 0, 0.5),
-        0 8px 30px rgba(80, 120, 200, 0.1),
-        inset 0 1px 0 rgba(140, 170, 230, 0.15),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.3) !important;
+        0 4px 16px rgba(0, 0, 0, 0.6),
+        0 8px 32px rgba(60, 100, 200, 0.15),
+        0 0 24px rgba(80, 130, 240, 0.08),
+        inset 0 1px 0 rgba(130, 170, 240, 0.2),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.4) !important;
     }
 
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::before,
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::before {
       background: linear-gradient(
         135deg,
-        rgba(100, 130, 200, 0.08) 0%,
-        rgba(80, 110, 180, 0.04) 25%,
-        rgba(255, 255, 255, 0) 50%,
-        rgba(90, 120, 190, 0.03) 75%,
-        rgba(100, 130, 200, 0.06) 100%
+        rgba(80, 120, 200, 0.12) 0%,
+        rgba(60, 100, 180, 0.05) 30%,
+        rgba(140, 170, 240, 0.15) 50%,
+        rgba(60, 100, 180, 0.05) 70%,
+        rgba(80, 120, 200, 0.1) 100%
       ) !important;
+      animation: milady-diamond-sparkle 3s ease-in-out infinite !important;
     }
 
     /* Diamond avatar glow */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"] [data-testid="Tweet-User-Avatar"] {
-      filter: drop-shadow(0 0 8px rgba(120, 160, 240, 0.3)) !important;
+      filter: drop-shadow(0 0 10px rgba(100, 150, 255, 0.4)) drop-shadow(0 0 20px rgba(120, 160, 240, 0.15)) !important;
+    }
+
+    /* Diamond border shimmer on hover */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]:hover {
+      box-shadow:
+        0 6px 20px rgba(80, 120, 200, 0.25),
+        0 12px 40px rgba(100, 140, 220, 0.15),
+        0 0 30px rgba(130, 170, 255, 0.12) !important;
     }
 
     /* Add spacing between milady user cells */
