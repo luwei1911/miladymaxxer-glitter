@@ -430,6 +430,7 @@ async function processUserCell(cell: HTMLElement): Promise<void> {
   const cellHandle = normalizeHandle(cellLink?.getAttribute("href"));
   if (cellHandle && settings.miladyListHandles.includes(cellHandle)) {
     cell.dataset.miladymaxxerEffect = "milady";
+    attachSoundEvents(cell);
     return;
   }
 
@@ -441,6 +442,7 @@ async function processUserCell(cell: HTMLElement): Promise<void> {
     });
     if (result.matched) {
       cell.dataset.miladymaxxerEffect = "milady";
+      attachSoundEvents(cell);
     } else {
       delete cell.dataset.miladymaxxerEffect;
     }

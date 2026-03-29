@@ -134,9 +134,9 @@ function playSendSound(): void {
 
 function playMessageBlip(): void {
   if (!settings.soundEnabled) return;
-  // Pip - audible high tap
-  playTone(1200, 0.08, "sine", 0.15, 0, 0.02);
-  setTimeout(() => playTone(1500, 0.06, "sine", 0.1, 0, 0.015), 30);
+  // Pip - subtle high tap
+  playTone(1200, 0.08, "sine", 0.06, 0, 0.02);
+  setTimeout(() => playTone(1500, 0.06, "sine", 0.04, 0, 0.015), 30);
 }
 
 export function playCatchSound(): void {

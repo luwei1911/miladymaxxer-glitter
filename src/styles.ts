@@ -8,26 +8,6 @@ export function injectStyles(): void {
   style.id = STYLE_ID;
   style.textContent = `
     /* Diminish effect - subtle shrink, no margin changes to prevent layout shift */
-    [data-miladymaxxer-effect="diminish"] {
-      transform: scale(0.98) !important;
-      transform-origin: center center !important;
-    }
-
-    /* Fade the tweet text and user info */
-    [data-miladymaxxer-effect="diminish"] [data-testid="tweetText"],
-    [data-miladymaxxer-effect="diminish"] [data-testid="User-Name"] {
-      opacity: 0.9 !important;
-    }
-
-    /* Fade images and media - 80% opacity */
-    [data-miladymaxxer-effect="diminish"] [data-testid="tweetPhoto"],
-    [data-miladymaxxer-effect="diminish"] [data-testid="videoPlayer"],
-    [data-miladymaxxer-effect="diminish"] [data-testid="card.wrapper"],
-    [data-miladymaxxer-effect="diminish"] [data-testid="card.layoutLarge.media"] {
-      opacity: 0.8 !important;
-      transition: opacity 0.15s ease !important;
-    }
-
     /* Milady posts - ensure full opacity on all content */
     [data-miladymaxxer-effect="milady"] [data-testid="tweetPhoto"],
     [data-miladymaxxer-effect="milady"] [data-testid="videoPlayer"],
@@ -37,13 +17,6 @@ export function injectStyles(): void {
     }
 
     /* Restore full opacity on hover */
-    [data-miladymaxxer-effect="diminish"] [data-testid="tweetPhoto"]:hover,
-    [data-miladymaxxer-effect="diminish"] [data-testid="videoPlayer"]:hover,
-    [data-miladymaxxer-effect="diminish"] [data-testid="card.wrapper"]:hover,
-    [data-miladymaxxer-effect="diminish"] [data-testid="card.layoutLarge.media"]:hover {
-      opacity: 1 !important;
-    }
-
     /* Sparkle animation */
     @keyframes milady-sparkle {
       0%, 100% {
@@ -344,11 +317,10 @@ export function injectStyles(): void {
       animation: milady-diamond-shimmer 4s ease infinite !important;
       border: 1.5px solid rgba(130, 160, 230, 0.5) !important;
       box-shadow:
-        0 4px 16px rgba(80, 120, 200, 0.2),
-        0 8px 32px rgba(100, 140, 220, 0.15),
-        0 0 20px rgba(130, 170, 255, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.95),
-        inset 0 -2px 4px rgba(130, 160, 230, 0.08) !important;
+        0 4px 12px rgba(80, 120, 200, 0.1),
+        0 8px 24px rgba(100, 140, 220, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -2px 4px rgba(130, 160, 230, 0.05) !important;
     }
 
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::before,
@@ -618,7 +590,7 @@ export function injectStyles(): void {
     /* ===== EDGE FADE ===== */
     /* Mask only the ::before and ::after overlays — tweet content and connector lines stay visible */
 
-    /* Fade top edge — square top corners */
+    /* Fade top edge — square top corners, fade side borders at top */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"],
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"]::before,
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"]::after {
@@ -628,6 +600,8 @@ export function injectStyles(): void {
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"] {
       border-top-color: transparent !important;
+      border-image: linear-gradient(to bottom, transparent 0%, rgba(212, 175, 55, 0.4) 3%) 1 !important;
+      border-image-slice: 1 !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"]::before,
@@ -644,8 +618,8 @@ export function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"] {
-      border-top-color: transparent !important;
-      border-bottom-color: transparent !important;
+      border-image: linear-gradient(to bottom, transparent 0%, rgba(212, 175, 55, 0.4) 3%, rgba(212, 175, 55, 0.4) 97%, transparent 100%) 1 !important;
+      border-image-slice: 1 !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"]::before,
@@ -663,7 +637,8 @@ export function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"] {
-      border-bottom-color: transparent !important;
+      border-image: linear-gradient(to bottom, rgba(212, 175, 55, 0.4) 97%, transparent 100%) 1 !important;
+      border-image-slice: 1 !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"]::before,
@@ -677,6 +652,7 @@ export function injectStyles(): void {
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade]:hover::before,
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade]:hover::after {
       border-radius: 12px !important;
+      border-image: none !important;
       border-color: rgba(212, 175, 55, 0.4) !important;
       -webkit-mask-image: none !important;
       mask-image: none !important;

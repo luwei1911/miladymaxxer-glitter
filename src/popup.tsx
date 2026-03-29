@@ -454,6 +454,8 @@ const styles = `
     gap: 10px;
     width: 100%;
     padding: 10px 8px;
+    overflow: hidden;
+    box-sizing: border-box;
     border-radius: 8px;
     margin-bottom: 4px;
     background: rgba(217, 240, 214, 0.5);
@@ -1009,7 +1011,7 @@ function App() {
 
               <Show when={caughtAccounts().length > 0}>
                 <div class="account-group">
-                  <p class="account-group-title">Caught</p>
+                  <p class="account-group-title">CAUGHT MILADYS</p>
                   <div class="account-list">
                     <For each={caughtAccounts()}>
                       {(account) => {
