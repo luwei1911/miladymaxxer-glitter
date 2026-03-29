@@ -103,9 +103,10 @@ export function injectStyles(): void {
       font: inherit !important;
       white-space: nowrap !important;
       margin-left: 4px !important;
-      display: inline !important;
-      position: relative !important;
-      top: -1px !important;
+      position: absolute !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      line-height: 1 !important;
     }
 
     /* MILADY effect - gold floating card with depth */
@@ -113,10 +114,11 @@ export function injectStyles(): void {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
-      margin: 0 !important;
+      margin: 6px 0 !important;
       border: none !important;
       outline: 1px solid rgba(212, 175, 55, 0.4) !important;
       outline-offset: -1px !important;
+      padding: 0 6px !important;
       box-shadow:
         0 4px 8px rgba(0, 0, 0, 0.1),
         0 8px 24px rgba(212, 175, 55, 0.2),
@@ -170,7 +172,7 @@ export function injectStyles(): void {
     /* Silver metallic for milady posts with 0 likes */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
       background: linear-gradient(180deg, rgba(245, 245, 248, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
-      border-color: rgba(160, 160, 170, 0.4) !important;
+      outline-color: rgba(160, 160, 170, 0.4) !important;
       box-shadow:
         0 2px 4px rgba(0, 0, 0, 0.08),
         0 4px 12px rgba(140, 140, 150, 0.15),
@@ -209,7 +211,7 @@ export function injectStyles(): void {
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
       background: linear-gradient(180deg, rgba(242, 242, 247, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
-      border-color: rgba(160, 160, 170, 0.4) !important;
+      outline-color: rgba(160, 160, 170, 0.4) !important;
       box-shadow:
         0 2px 4px rgba(0, 0, 0, 0.06),
         0 4px 12px rgba(140, 140, 150, 0.12),
@@ -234,7 +236,7 @@ export function injectStyles(): void {
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-no-likes="true"] {
       background: linear-gradient(180deg, rgb(24, 26, 36) 0%, rgb(17, 19, 27) 100%) !important;
-      border: 1px solid rgba(110, 115, 140, 0.3) !important;
+      outline-color: rgba(110, 115, 140, 0.3) !important;
       box-shadow:
         0 4px 14px rgba(110, 115, 140, 0.06),
         inset 0 1px 0 rgba(150, 155, 175, 0.1) !important;
@@ -287,10 +289,11 @@ export function injectStyles(): void {
     /* Dark mode liked - subtly richer than base */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgb(48, 40, 16) 0%, rgb(36, 30, 12) 100%) !important;
+      background: linear-gradient(180deg, rgb(36, 30, 12) 0%, rgb(28, 23, 10) 100%) !important;
       box-shadow:
-        0 4px 16px rgba(150, 120, 42, 0.08),
-        inset 0 1px 0 rgba(220, 180, 70, 0.16) !important;
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        0 4px 16px rgba(212, 175, 55, 0.1),
+        inset 0 1px 0 rgba(220, 180, 70, 0.12) !important;
     }
 
     /* Diamond tier - 100+ likes */
@@ -498,42 +501,41 @@ export function injectStyles(): void {
       outline-offset: -1px !important;
     }
 
-    /* Profile level badge — sits in the button row */
+    /* Profile level badge — positioned below button row, no layout shift */
     .miladymaxxer-profile-level {
-      display: flex !important;
+      position: absolute !important;
+      top: 100% !important;
+      right: 0 !important;
+      display: inline-flex !important;
       align-items: center !important;
       gap: 6px !important;
-      padding: 6px 12px !important;
-      border: 1px solid rgba(212, 175, 55, 0.3) !important;
-      border-radius: 9999px !important;
-      background: transparent !important;
-    }
-
-    .miladymaxxer-profile-level-text {
-      color: #d4af37 !important;
-      font-size: 14px !important;
-      font-weight: 700 !important;
+      margin-top: 4px !important;
       white-space: nowrap !important;
     }
 
-    .miladymaxxer-profile-level-bar {
-      width: 40px !important;
-      height: 4px !important;
-      border-radius: 2px !important;
-      background: rgba(212, 175, 55, 0.15) !important;
-      overflow: hidden !important;
-    }
-
-    .miladymaxxer-profile-level-bar-fill {
-      height: 100% !important;
-      border-radius: 2px !important;
-      background: linear-gradient(90deg, #d4af37, #f0c850) !important;
-    }
-
-    .miladymaxxer-profile-level-detail {
-      color: rgb(113, 118, 123) !important;
+    .miladymaxxer-profile-level-pill {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 2px 10px !important;
+      border-radius: 10px !important;
+      background: linear-gradient(135deg, #d4af37 0%, #f0c850 50%, #d4af37 100%) !important;
+      color: #1a1a1a !important;
       font-size: 12px !important;
+      font-weight: 700 !important;
+      text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3) !important;
       white-space: nowrap !important;
+      line-height: 1.4 !important;
+    }
+
+    .miladymaxxer-profile-level-xp {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      color: rgb(113, 118, 123) !important;
+      font-size: 11px !important;
+      white-space: nowrap !important;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
     }
 
     /* Gold accent on the "Follows you" badge and handle area */
@@ -603,6 +605,15 @@ export function injectStyles(): void {
     /* ===== END PROFILE PAGE STYLING ===== */
 
 
+    /* Adjacent milady cards on timeline — match reply view spacing */
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-adjacent-above="true"] {
+      margin-top: 3px !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-adjacent-below="true"] {
+      margin-bottom: 3px !important;
+    }
+
     /* ===== EDGE FADE ===== */
     /* Mask only the ::before and ::after overlays — tweet content and connector lines stay visible */
 
@@ -616,6 +627,7 @@ export function injectStyles(): void {
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"] {
       outline-color: transparent !important;
+      margin-top: 3px !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"]::before,
@@ -633,6 +645,8 @@ export function injectStyles(): void {
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"] {
       outline-color: transparent !important;
+      margin-top: 3px !important;
+      margin-bottom: 3px !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"]::before,
@@ -651,6 +665,7 @@ export function injectStyles(): void {
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"] {
       outline-color: transparent !important;
+      margin-bottom: 3px !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"]::before,
@@ -820,12 +835,11 @@ export function injectStyles(): void {
     @media (prefers-color-scheme: dark) {
       [data-miladymaxxer-effect="milady"] {
         background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
-        border: 1px solid rgba(212, 175, 55, 0.4) !important;
-        margin: 4px 4px !important;
+        outline-color: rgba(212, 175, 55, 0.3) !important;
         box-shadow:
-          0 0 16px rgba(212, 175, 55, 0.25),
-          0 4px 24px rgba(212, 175, 55, 0.2),
-          inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
+          0 2px 8px rgba(0, 0, 0, 0.3),
+          0 4px 16px rgba(212, 175, 55, 0.08),
+          inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
       }
     }
 
@@ -845,12 +859,11 @@ export function injectStyles(): void {
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
       background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
-      border: 1px solid rgba(212, 175, 55, 0.4) !important;
-      margin: 4px 4px !important;
+      outline-color: rgba(212, 175, 55, 0.3) !important;
       box-shadow:
-        0 0 16px rgba(212, 175, 55, 0.25),
-        0 4px 24px rgba(212, 175, 55, 0.2),
-        inset 0 1px 0 rgba(255, 215, 0, 0.15) !important;
+        0 2px 8px rgba(0, 0, 0, 0.3),
+        0 4px 16px rgba(212, 175, 55, 0.08),
+        inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
     }
 
 

@@ -75,6 +75,22 @@ function getEdgeFade(tweet: HTMLElement): string {
   return "none";
 }
 
+function hasMiladyAbove(tweet: HTMLElement): boolean {
+  const container = tweet.closest(CELL_INNER_DIV) ?? tweet.parentElement;
+  if (!container) return false;
+  const prev = container.previousElementSibling;
+  const prevTweet = prev?.querySelector<HTMLElement>(TWEET);
+  return prevTweet?.dataset.miladymaxxerState === "match";
+}
+
+function hasMiladyBelow(tweet: HTMLElement): boolean {
+  const container = tweet.closest(CELL_INNER_DIV) ?? tweet.parentElement;
+  if (!container) return false;
+  const next = container.nextElementSibling;
+  const nextTweet = next?.querySelector<HTMLElement>(TWEET);
+  return nextTweet?.dataset.miladymaxxerState === "match";
+}
+
 function applyDebugState(tweet: HTMLElement): void {
   if (tweet.dataset.miladymaxxerState === "match") {
     tweet.dataset.miladymaxxerEffect = "debug-match";
@@ -102,6 +118,8 @@ export function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerNoLikes;
   delete tweet.dataset.miladymaxxerLiked;
   delete tweet.dataset.miladymaxxerFade;
+  delete tweet.dataset.miladymaxxerAdjacentAbove;
+  delete tweet.dataset.miladymaxxerAdjacentBelow;
 }
 
 export function clearPlaceholder(tweet: HTMLElement): void {
@@ -320,17 +338,13 @@ function injectInlineElement(tweet: HTMLElement, element: HTMLElement): void {
 
 function updateLevelBadge(ctx: EffectsContext, tweet: HTMLElement): void {
   const handle = tweet.dataset.miladymaxxerHandle;
-  if (!handle || !ctx.settings.showLevelBadge || !ctx.isAccountCaught(handle)) {
+  if (!handle || !ctx.settings.showLevelBadge) {
     removeLevelBadge(tweet);
     return;
   }
 
   const postsLiked = ctx.getAccountPostsLiked(handle);
   const progress = getLevelProgress(postsLiked);
-  if (progress.level < 1) {
-    removeLevelBadge(tweet);
-    return;
-  }
 
   let badge = levelBadges.get(tweet);
   if (!badge) {
@@ -412,6 +426,17 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
       tweet.style.display = "";
       if (isMatch) {
         tweet.dataset.miladymaxxerEffect = "milady";
+        // Tighten margin between adjacent milady cards
+        if (hasMiladyAbove(tweet)) {
+          tweet.dataset.miladymaxxerAdjacentAbove = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerAdjacentAbove;
+        }
+        if (hasMiladyBelow(tweet)) {
+          tweet.dataset.miladymaxxerAdjacentBelow = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerAdjacentBelow;
+        }
         // Set edge fade based on adjacent tweets
         const fade = getEdgeFade(tweet);
         if (fade !== "none") {

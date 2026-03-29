@@ -566,26 +566,56 @@ function injectProfileLevelBadge(handle: string): void {
   const progress = getLevelProgress(account.postsLiked);
   if (progress.level < 1) return;
 
-  // Remove existing badge if present
-  const existing = document.querySelector(".miladymaxxer-profile-level");
-  if (existing) existing.remove();
-
-  // Place next to the Follow/Following button row
-  const followButton = document.querySelector<HTMLElement>(
-    '[data-testid="primaryColumn"] [data-testid$="-follow"], [data-testid="primaryColumn"] [data-testid$="-unfollow"]',
-  );
-  const buttonRow = followButton?.parentElement;
-  if (!buttonRow) return;
+  // Remove existing elements if present
+  document.querySelector(".miladymaxxer-profile-level")?.remove();
 
   const pct = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 100) : 0;
+  const filled = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 5) : 0;
+  const ascii = "\u2593".repeat(filled) + "\u2591".repeat(5 - filled);
+
+  // Build detailed tooltip
+  const tooltipLines = [`Level ${progress.level} \u00b7 ${progress.current}/${progress.needed} to next level`];
+  if (account.postsMatched > 0) tooltipLines.push(`Posts seen: ${account.postsMatched}`);
+  if (account.postsLiked > 0) tooltipLines.push(`Posts liked: ${account.postsLiked}`);
+  if (account.caughtAt) {
+    const caughtDate = new Date(account.caughtAt);
+    tooltipLines.push(`Caught: ${caughtDate.toLocaleDateString()}`);
+  }
+  if (account.lastDetectionScore != null) {
+    tooltipLines.push(`Detection score: ${(account.lastDetectionScore * 100).toFixed(0)}%`);
+  }
 
   const badge = document.createElement("div");
   badge.className = "miladymaxxer-profile-level";
+  badge.title = tooltipLines.join("\n");
   badge.innerHTML =
-    `<span class="miladymaxxer-profile-level-text">Lv.${progress.level}</span>` +
-    `<div class="miladymaxxer-profile-level-bar"><div class="miladymaxxer-profile-level-bar-fill" style="width:${pct}%"></div></div>` +
-    `<span class="miladymaxxer-profile-level-detail">${progress.current}/${progress.needed}</span>`;
-  buttonRow.insertBefore(badge, buttonRow.firstChild);
+    `<span class="miladymaxxer-profile-level-pill">Level: ${progress.level}</span>` +
+    `<span class="miladymaxxer-profile-level-xp">XP: ${progress.current}/${progress.needed} ${ascii}</span>`;
+
+  // Try to inject below the button row (Following / mail / more buttons)
+  const primaryCol = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
+  if (!primaryCol) return;
+
+  const followBtn = primaryCol.querySelector<HTMLElement>('[data-testid$="-follow"], [data-testid$="-unfollow"]');
+  const buttonRow = followBtn?.parentElement?.parentElement;
+  if (buttonRow) {
+    // Make parent relative so we can position absolutely below
+    buttonRow.style.position = "relative";
+    buttonRow.appendChild(badge);
+    return;
+  }
+
+  // Fallback: inject after @handle span
+  const profileUserName = document.querySelector<HTMLElement>(PROFILE_USER_NAME);
+  if (!profileUserName) return;
+  const allSpans = profileUserName.querySelectorAll("span");
+  for (const span of Array.from(allSpans)) {
+    const text = span.textContent?.trim();
+    if (text?.startsWith("@") && span.children.length === 0) {
+      span.after(badge);
+      return;
+    }
+  }
 }
 
 function resolveSelfHandle(): string | null {

@@ -12,9 +12,11 @@ export function getLevelProgress(postsLiked: number): LevelProgress {
   const level = getLevel(postsLiked);
   const currentThreshold = level * level;
   const nextThreshold = (level + 1) * (level + 1);
+  const raw = postsLiked - currentThreshold;
+  const span = nextThreshold - currentThreshold;
   return {
     level,
-    current: postsLiked - currentThreshold,
-    needed: nextThreshold - currentThreshold,
+    current: raw === 0 && postsLiked > 0 ? 1 : raw,
+    needed: span,
   };
 }
