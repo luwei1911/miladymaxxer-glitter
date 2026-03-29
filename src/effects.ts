@@ -452,10 +452,7 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
           tweet.dataset.miladymaxxerEffect = "milady";
         }
         // Tighten margin between adjacent milady cards in threads
-        const inStatusView = /\/status\//.test(window.location.href);
-        const onProfile = isOnProfilePage();
-        const cellDiv = tweet.closest(CELL_INNER_DIV) ?? tweet.parentElement;
-        const canTighten = inStatusView || (!onProfile && cellDiv && isCellInThread(cellDiv));
+        const canTighten = /\/status\//.test(window.location.href);
         if (canTighten && hasMiladyAbove(tweet)) {
           tweet.dataset.miladymaxxerAdjacentAbove = "true";
         } else {
