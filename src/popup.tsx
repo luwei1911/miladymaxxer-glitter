@@ -616,8 +616,8 @@ const styles = `
     justify-content: center;
     padding: 1px 7px;
     border-radius: 8px;
-    background: linear-gradient(135deg, #2f4d0c 0%, #3d6510 100%);
-    color: #e8f5e0;
+    background: linear-gradient(135deg, #4a7a28 0%, #5d9432 100%);
+    color: #f4ffee;
     font-size: 10px;
     font-weight: 700;
     white-space: nowrap;
@@ -1001,7 +1001,7 @@ function App() {
               <p class="section-note" style="margin-bottom: 6px">Card theming</p>
               <div class="sort-toggle" style="width: 100%">
                 <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "full")} onClick={() => void setCardTheme("full")}>Full</button>
-                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "no-premium")} onClick={() => void setCardTheme("no-premium")}>No diamond/gold</button>
+                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "no-premium")} onClick={() => void setCardTheme("no-premium")}>Green/silver only</button>
                 <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "silver-only")} onClick={() => void setCardTheme("silver-only")}>Silver only</button>
                 <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "off")} onClick={() => void setCardTheme("off")}>Off</button>
               </div>

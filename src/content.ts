@@ -390,15 +390,15 @@ async function processProfilePage(): Promise<void> {
   // Extract profile handle from URL
   const profileHandle = normalizeHandle(window.location.pathname.split("/")[1] ?? "");
 
-  // Always refresh the badge even if already processed
+  // Always refresh badges even if already processed
   if (profileHandle) {
     const primaryColumn = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
     if (primaryColumn?.dataset.miladymaxxerProfile === "milady") {
       injectProfileLevelBadge(profileHandle);
     }
-    // Also refresh player badge on own profile
+    // Always re-inject player badge on own profile (Twitter SPA may rebuild DOM)
     const self = resolveSelfHandle();
-    if (self && profileHandle === self) {
+    if (self && profileHandle === self && !document.querySelector(".miladymaxxer-player-profile-level")) {
       injectPlayerProfileBadge();
     }
   }
@@ -569,7 +569,7 @@ function replaceXLogo(): void {
         top: 50%;
         transform: translateY(-50%);
         margin-left: -44px;
-        color: rgb(113, 118, 123);
+        color: #2f4d0c;
         font-size: 10px;
         font-weight: 600;
         letter-spacing: 1px;
@@ -726,6 +726,7 @@ function injectProfileLevelBadge(handle: string): void {
   badge.innerHTML =
     `<span class="${pillClass}">Milady Lvl: ${progress.level}</span>` +
     `<span class="miladymaxxer-profile-level-xp">${ascii} ${pct}%</span>`;
+
   const buttonRow = followBtn?.parentElement?.parentElement;
   if (buttonRow) {
     // Make parent relative so we can position absolutely below
@@ -798,8 +799,9 @@ function findReplyToHandle(tweet: HTMLElement): string | null {
   return null;
 }
 
-function checkReplyXP(tweet: HTMLElement, author: { handle: string } | null): void {
-  if (!author || !matchedAccounts || creditedReplies.has(tweet)) return;
+function checkReplyXP(_tweet: HTMLElement, _author: { handle: string } | null): void {
+  // Disabled — XP should only come from like actions, not from scanning existing replies
+  return;
 
   const self = resolveSelfHandle();
   if (!self || author.handle !== self) return;
@@ -1110,6 +1112,7 @@ function updatePlayerLevelBadge(): void {
   // Check for level up
   if (newLevel > prevPlayerLevel && prevPlayerLevel > 0) {
     playLevelUpSound();
+    try { chrome.runtime.sendMessage({ type: "levelup", level: newLevel }); } catch {};
     const existing = wrapper.querySelector(".miladymaxxer-player-level") as HTMLElement | null;
     if (existing) {
       existing.style.transform = "scale(1.3)";

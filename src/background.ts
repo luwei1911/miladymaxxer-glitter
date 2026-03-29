@@ -5,11 +5,39 @@ chrome.runtime.onMessage.addListener((message) => {
   if (message.type === "badge" && typeof message.count === "number") {
     void updateIconWithCount(message.count);
   }
+  if (message.type === "levelup" && typeof message.level === "number") {
+    chrome.notifications.create(`milady-levelup-${Date.now()}`, {
+      type: "basic",
+      iconUrl: "milady-logo.png",
+      title: "Milady Level Up!",
+      message: `You reached Level ${message.level}`,
+      priority: 1,
+    });
+  }
 });
 
 async function updateIconWithCount(count: number): Promise<void> {
   if (count <= 0) {
-    await chrome.action.setIcon({ path: "milady-logo.png" });
+    // Draw rounded icon without count
+    try {
+      const canvas = new OffscreenCanvas(128, 128);
+      const ctx = canvas.getContext("2d")!;
+      const response = await fetch(chrome.runtime.getURL("milady-logo.png"));
+      const blob = await response.blob();
+      const bitmap = await createImageBitmap(blob);
+      const r = 28;
+      ctx.beginPath();
+      ctx.moveTo(r, 0); ctx.lineTo(128 - r, 0); ctx.quadraticCurveTo(128, 0, 128, r);
+      ctx.lineTo(128, 128 - r); ctx.quadraticCurveTo(128, 128, 128 - r, 128);
+      ctx.lineTo(r, 128); ctx.quadraticCurveTo(0, 128, 0, 128 - r);
+      ctx.lineTo(0, r); ctx.quadraticCurveTo(0, 0, r, 0);
+      ctx.closePath(); ctx.clip();
+      ctx.drawImage(bitmap, 0, 0, 128, 128);
+      const imageData = ctx.getImageData(0, 0, 128, 128);
+      await chrome.action.setIcon({ imageData: { 128: imageData } });
+    } catch {
+      await chrome.action.setIcon({ path: "milady-logo.png" });
+    }
     await chrome.action.setBadgeText({ text: "" });
     return;
   }
@@ -21,27 +49,37 @@ async function updateIconWithCount(count: number): Promise<void> {
     const response = await fetch(chrome.runtime.getURL("milady-logo.png"));
     const blob = await response.blob();
     const bitmap = await createImageBitmap(blob);
+
+    // Draw logo with rounded corners
+    const r = 28;
+    ctx.beginPath();
+    ctx.moveTo(r, 0);
+    ctx.lineTo(128 - r, 0);
+    ctx.quadraticCurveTo(128, 0, 128, r);
+    ctx.lineTo(128, 128 - r);
+    ctx.quadraticCurveTo(128, 128, 128 - r, 128);
+    ctx.lineTo(r, 128);
+    ctx.quadraticCurveTo(0, 128, 0, 128 - r);
+    ctx.lineTo(0, r);
+    ctx.quadraticCurveTo(0, 0, r, 0);
+    ctx.closePath();
+    ctx.clip();
     ctx.drawImage(bitmap, 0, 0, 128, 128);
 
     const text = String(count);
-    ctx.font = "bold 52px sans-serif";
-    ctx.textAlign = "right";
+    ctx.font = "bold 56px sans-serif";
+    ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.lineJoin = "round";
 
-    // White outer outline for legibility
+    // White outline for legibility
     ctx.strokeStyle = "#ffffff";
-    ctx.lineWidth = 12;
-    ctx.strokeText(text, 122, 124);
-
-    // Black inner outline
-    ctx.strokeStyle = "#000000";
-    ctx.lineWidth = 6;
-    ctx.strokeText(text, 122, 124);
+    ctx.lineWidth = 14;
+    ctx.strokeText(text, 116, 128);
 
     // Green fill
-    ctx.fillStyle = "#3d6510";
-    ctx.fillText(text, 122, 124);
+    ctx.fillStyle = "#2f4d0c";
+    ctx.fillText(text, 116, 128);
 
     const imageData = ctx.getImageData(0, 0, 128, 128);
     await chrome.action.setIcon({ imageData: { 128: imageData } });

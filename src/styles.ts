@@ -154,7 +154,7 @@ export function injectStyles(): void {
     .miladymaxxer-player-profile-level {
       position: absolute !important;
       top: 100% !important;
-      right: 0 !important;
+      left: 0 !important;
       display: inline-flex !important;
       align-items: center !important;
       gap: 6px !important;
@@ -310,14 +310,14 @@ export function injectStyles(): void {
         ) !important;
     }
 
-    /* Mint green card — caught milady with <75 likes (base: barely there) */
+    /* Mint green card — caught milady with <75 likes (base: subtle but visible) */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] {
-      background: linear-gradient(180deg, rgba(252, 255, 251, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
-      outline-color: rgba(47, 77, 12, 0.08) !important;
+      background: linear-gradient(180deg, rgba(250, 255, 248, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.25) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.02),
-        0 4px 12px rgba(47, 77, 12, 0.03),
-        inset 0 1px 0 rgba(200, 240, 180, 0.1) !important;
+        0 2px 4px rgba(0, 0, 0, 0.06),
+        0 4px 12px rgba(47, 77, 12, 0.08),
+        inset 0 1px 0 rgba(200, 240, 180, 0.3) !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::before {
@@ -337,15 +337,15 @@ export function injectStyles(): void {
       filter: drop-shadow(0 0 8px rgba(47, 77, 12, 0.3)) !important;
     }
 
-    /* Light mode mint (base: barely there) */
+    /* Light mode mint (base: subtle but visible) */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] {
-      background: linear-gradient(180deg, rgba(252, 255, 251, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
-      outline-color: rgba(47, 77, 12, 0.08) !important;
+      background: linear-gradient(180deg, rgba(248, 255, 246, 1) 0%, rgba(255, 255, 254, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.25) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.02),
-        0 4px 12px rgba(47, 77, 12, 0.03),
-        inset 0 1px 0 rgba(217, 240, 214, 0.15) !important;
+        0 2px 4px rgba(0, 0, 0, 0.06),
+        0 4px 12px rgba(47, 77, 12, 0.08),
+        inset 0 1px 0 rgba(217, 240, 214, 0.35) !important;
     }
 
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::before,
@@ -762,6 +762,10 @@ export function injectStyles(): void {
       white-space: nowrap !important;
     }
 
+    .miladymaxxer-profile-level {
+      pointer-events: auto !important;
+    }
+
     .miladymaxxer-profile-level-pill {
       display: inline-flex !important;
       align-items: center !important;
@@ -769,8 +773,8 @@ export function injectStyles(): void {
       padding: 2px 10px !important;
       margin-right: 6px !important;
       border-radius: 10px !important;
-      background: linear-gradient(135deg, #2f4d0c 0%, #3d6510 50%, #2f4d0c 100%) !important;
-      color: #e8f5e0 !important;
+      background: linear-gradient(135deg, #4a7a28 0%, #5d9432 50%, #4a7a28 100%) !important;
+      color: #f4ffee !important;
       font-size: 12px !important;
       font-weight: 700 !important;
       text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2) !important;
@@ -864,6 +868,10 @@ export function injectStyles(): void {
     /* Adjacent milady cards — tighter spacing */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-adjacent-below="true"] {
       margin-bottom: 3px !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-adjacent-above="true"] {
+      margin-top: 0 !important;
     }
 
     /* ===== EDGE FADE ===== */
