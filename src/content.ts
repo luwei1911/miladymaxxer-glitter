@@ -113,7 +113,9 @@ function effectsCtx(): EffectsContext {
 // Boot
 // ---------------------------------------------------------------------------
 
-void boot();
+void boot().catch(() => {
+  // Extension context invalidated — normal after extension reload
+});
 
 async function boot(): Promise<void> {
   injectStyles();
@@ -1173,10 +1175,12 @@ function isFilterMode(value: unknown): value is ExtensionSettings["mode"] {
 
 function observeStorage(): void {
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === "sync" && (changes.mode || changes.whitelistHandles || changes.miladyListHandles || changes.soundEnabled || changes.showLevelBadge)) {
+    if (area === "sync" && (changes.mode || changes.whitelistHandles || changes.miladyListHandles || changes.soundEnabled || changes.showLevelBadge || changes.cardTheme)) {
       const nextMode = changes.mode?.newValue;
       const nextSoundEnabled = changes.soundEnabled?.newValue;
       const nextShowLevelBadge = changes.showLevelBadge?.newValue;
+      const nextCardTheme = changes.cardTheme?.newValue;
+      const validThemes = ["full", "no-premium", "silver-only", "off"];
       settings = {
         mode: isFilterMode(nextMode) ? nextMode : settings.mode,
         whitelistHandles: normalizeWhitelistHandles(
@@ -1187,6 +1191,7 @@ function observeStorage(): void {
         ),
         soundEnabled: typeof nextSoundEnabled === "boolean" ? nextSoundEnabled : settings.soundEnabled,
         showLevelBadge: typeof nextShowLevelBadge === "boolean" ? nextShowLevelBadge : settings.showLevelBadge,
+        cardTheme: validThemes.includes(nextCardTheme) ? nextCardTheme : settings.cardTheme,
       };
       setSoundSettings(settings);
       scheduleProcessVisibleTweets();

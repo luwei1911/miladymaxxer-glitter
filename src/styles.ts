@@ -310,14 +310,14 @@ export function injectStyles(): void {
         ) !important;
     }
 
-    /* Mint green card — caught milady with <50 likes (base: very subtle) */
+    /* Mint green card — caught milady with <75 likes (base: barely there) */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] {
-      background: linear-gradient(180deg, rgba(252, 255, 250, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
-      outline-color: rgba(47, 77, 12, 0.1) !important;
+      background: linear-gradient(180deg, rgba(252, 255, 251, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.08) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.03),
+        0 2px 4px rgba(0, 0, 0, 0.02),
         0 4px 12px rgba(47, 77, 12, 0.03),
-        inset 0 1px 0 rgba(200, 240, 180, 0.12) !important;
+        inset 0 1px 0 rgba(200, 240, 180, 0.1) !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::before {
@@ -337,15 +337,15 @@ export function injectStyles(): void {
       filter: drop-shadow(0 0 8px rgba(47, 77, 12, 0.3)) !important;
     }
 
-    /* Light mode mint (base: very subtle) */
+    /* Light mode mint (base: barely there) */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"] {
-      background: linear-gradient(180deg, rgba(250, 255, 248, 1) 0%, rgba(255, 255, 254, 1) 100%) !important;
-      outline-color: rgba(47, 77, 12, 0.12) !important;
+      background: linear-gradient(180deg, rgba(252, 255, 251, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.08) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.03),
-        0 4px 12px rgba(47, 77, 12, 0.04),
-        inset 0 1px 0 rgba(217, 240, 214, 0.25) !important;
+        0 2px 4px rgba(0, 0, 0, 0.02),
+        0 4px 12px rgba(47, 77, 12, 0.03),
+        inset 0 1px 0 rgba(217, 240, 214, 0.15) !important;
     }
 
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"]::before,
@@ -421,15 +421,15 @@ export function injectStyles(): void {
         inset 0 1px 0 rgba(80, 170, 55, 0.12) !important;
     }
 
-    /* Dark mode gold liked — richer warm tint */
+    /* Dark mode gold liked — clean step up, no gradient shine */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"]):not([data-miladymaxxer-diamond="true"]),
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"]):not([data-miladymaxxer-diamond="true"]) {
-      background: linear-gradient(180deg, rgb(26, 23, 17) 0%, rgb(20, 18, 13) 100%) !important;
-      outline-color: rgba(160, 140, 55, 0.35) !important;
+      background: linear-gradient(180deg, rgb(36, 30, 16) 0%, rgb(28, 23, 12) 100%) !important;
+      outline-color: rgba(160, 135, 50, 0.5) !important;
       box-shadow:
         0 2px 8px rgba(0, 0, 0, 0.4),
-        0 4px 16px rgba(120, 100, 30, 0.06),
-        inset 0 1px 0 rgba(160, 140, 55, 0.06) !important;
+        0 4px 16px rgba(120, 100, 30, 0.08),
+        inset 0 1px 0 rgba(160, 135, 50, 0.08) !important;
     }
 
     /* Mint avatar glow — green instead of gold */
@@ -449,25 +449,25 @@ export function injectStyles(): void {
       ) !important;
     }
 
-    /* Mint liked — richer green */
+    /* Mint liked — noticeably green */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgba(226, 245, 218, 1) 0%, rgba(242, 255, 236, 1) 100%) !important;
-      outline-color: rgba(47, 77, 12, 0.3) !important;
+      background: linear-gradient(180deg, rgba(240, 252, 236, 1) 0%, rgba(250, 255, 248, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.22) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.05),
-        0 4px 12px rgba(47, 77, 12, 0.1),
-        inset 0 1px 0 rgba(190, 235, 170, 0.5) !important;
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        0 4px 12px rgba(47, 77, 12, 0.07),
+        inset 0 1px 0 rgba(200, 240, 180, 0.35) !important;
     }
 
-    /* Light mode mint liked */
+    /* Light mode mint liked — noticeably green */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-mint="true"][data-miladymaxxer-liked="true"] {
-      background: linear-gradient(180deg, rgba(226, 245, 218, 1) 0%, rgba(242, 255, 236, 1) 100%) !important;
-      outline-color: rgba(47, 77, 12, 0.3) !important;
+      background: linear-gradient(180deg, rgba(240, 252, 236, 1) 0%, rgba(250, 255, 248, 1) 100%) !important;
+      outline-color: rgba(47, 77, 12, 0.22) !important;
       box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.05),
-        0 4px 12px rgba(47, 77, 12, 0.1),
-        inset 0 1px 0 rgba(190, 235, 170, 0.5) !important;
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        0 4px 12px rgba(47, 77, 12, 0.07),
+        inset 0 1px 0 rgba(200, 240, 180, 0.35) !important;
     }
 
     /* Enhanced gold for posts user has liked - 20% more gold (only non-mint/non-uncaught) */
@@ -482,23 +482,36 @@ export function injectStyles(): void {
       background:
         linear-gradient(
           135deg,
-          rgba(212, 175, 55, 0.22) 0%,
-          rgba(255, 223, 100, 0.32) 15%,
+          rgba(212, 175, 55, 0.1) 0%,
+          rgba(255, 223, 100, 0.12) 15%,
           rgba(255, 255, 255, 0) 40%,
-          rgba(212, 175, 55, 0.12) 65%,
-          rgba(255, 215, 0, 0.28) 85%,
-          rgba(184, 134, 11, 0.18) 100%
+          rgba(212, 175, 55, 0.05) 65%,
+          rgba(255, 215, 0, 0.1) 85%,
+          rgba(184, 134, 11, 0.06) 100%
         ) !important;
     }
 
-    /* Light mode liked - ~30% richer than base (gold only) */
+    /* Dark mode: kill the liked gold sheen entirely — let bg/outline carry it */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]::before,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]::before {
+      background: none !important;
+    }
+
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]::after,
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]::after {
+      background: none !important;
+      animation: none !important;
+    }
+
+    /* Light mode liked - richer gold (gold only) */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"]):not([data-miladymaxxer-diamond="true"]),
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"]:not([data-miladymaxxer-mint="true"]):not([data-miladymaxxer-uncaught="true"]):not([data-miladymaxxer-diamond="true"]) {
-      background: linear-gradient(180deg, rgba(255, 243, 200, 1) 0%, rgba(255, 250, 230, 1) 100%) !important;
+      background: linear-gradient(180deg, rgba(255, 249, 228, 1) 0%, rgba(255, 254, 245, 1) 100%) !important;
+      outline-color: rgba(212, 175, 55, 0.3) !important;
       box-shadow:
-        0 2px 6px rgba(184, 134, 11, 0.12),
-        0 4px 16px rgba(212, 175, 55, 0.18),
-        inset 0 1px 0 rgba(255, 223, 100, 0.4) !important;
+        0 2px 4px rgba(184, 134, 11, 0.08),
+        0 4px 12px rgba(212, 175, 55, 0.12),
+        inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
     }
 
     /* Diamond tier - 150+ likes */
@@ -519,15 +532,15 @@ export function injectStyles(): void {
     /* Diamond light mode */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"] {
-      background: linear-gradient(135deg, #eef2ff 0%, #dce4ff 20%, #f4f6ff 40%, #d8e2ff 60%, #edf1ff 80%, #dce4ff 100%) !important;
+      background: linear-gradient(135deg, #f2f4ff 0%, #e8ecff 20%, #f6f7ff 40%, #e4e9ff 60%, #f2f4ff 80%, #e8ecff 100%) !important;
       background-size: 300% 300% !important;
       animation: milady-diamond-shimmer 4s ease infinite !important;
-      border: 1.5px solid rgba(130, 160, 230, 0.5) !important;
+      outline-color: rgba(130, 160, 230, 0.35) !important;
+      border: none !important;
       box-shadow:
-        0 4px 12px rgba(80, 120, 200, 0.1),
-        0 8px 24px rgba(100, 140, 220, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.9),
-        inset 0 -2px 4px rgba(130, 160, 230, 0.05) !important;
+        0 4px 12px rgba(80, 120, 200, 0.08),
+        0 8px 24px rgba(100, 140, 220, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
     }
 
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"]::before,
@@ -571,15 +584,37 @@ export function injectStyles(): void {
     /* Diamond dark mode */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"] {
-      background: linear-gradient(135deg, rgb(14, 18, 40) 0%, rgb(20, 26, 55) 20%, rgb(16, 22, 48) 40%, rgb(24, 32, 62) 60%, rgb(14, 18, 40) 80%, rgb(20, 26, 55) 100%) !important;
+      background: linear-gradient(135deg, rgb(14, 16, 32) 0%, rgb(18, 22, 42) 20%, rgb(14, 16, 32) 40%, rgb(20, 26, 48) 60%, rgb(14, 16, 32) 80%, rgb(18, 22, 42) 100%) !important;
       background-size: 300% 300% !important;
       animation: milady-diamond-shimmer 4s ease infinite !important;
-      border: 1.5px solid rgba(90, 130, 220, 0.5) !important;
+      outline-color: rgba(90, 120, 200, 0.4) !important;
+      border: none !important;
       box-shadow:
         0 4px 16px rgba(0, 0, 0, 0.5),
-        0 8px 32px rgba(60, 100, 200, 0.15),
-        0 0 20px rgba(70, 120, 220, 0.08),
-        inset 0 1px 0 rgba(120, 160, 240, 0.15) !important;
+        0 8px 32px rgba(60, 90, 180, 0.1),
+        inset 0 1px 0 rgba(100, 140, 220, 0.1) !important;
+    }
+
+    /* Diamond liked — light mode richer */
+    html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"][data-miladymaxxer-liked="true"],
+    body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"][data-miladymaxxer-liked="true"] {
+      background: linear-gradient(135deg, #e4e9ff 0%, #d4dcff 20%, #eef1ff 40%, #d0d8ff 60%, #e4e9ff 80%, #d4dcff 100%) !important;
+      outline-color: rgba(100, 140, 220, 0.45) !important;
+      box-shadow:
+        0 4px 12px rgba(80, 120, 200, 0.12),
+        0 8px 24px rgba(100, 140, 220, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    }
+
+    /* Diamond liked — dark mode richer */
+    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"][data-miladymaxxer-liked="true"],
+    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-diamond="true"][data-miladymaxxer-liked="true"] {
+      background: linear-gradient(135deg, rgb(16, 20, 42) 0%, rgb(22, 28, 55) 20%, rgb(16, 20, 42) 40%, rgb(26, 34, 60) 60%, rgb(16, 20, 42) 80%, rgb(22, 28, 55) 100%) !important;
+      outline-color: rgba(90, 130, 220, 0.55) !important;
+      box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.5),
+        0 8px 32px rgba(60, 100, 200, 0.14),
+        inset 0 1px 0 rgba(120, 160, 240, 0.14) !important;
     }
 
     /* Diamond avatar glow */
@@ -1047,20 +1082,20 @@ export function injectStyles(): void {
         ) !important;
     }
 
-    /* Light mode - warm gold tint */
+    /* Light mode - very subtle gold tint */
     [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgba(255, 252, 240, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
+      background: linear-gradient(180deg, rgba(255, 254, 248, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
     }
 
     /* Dark mode fallback */
     @media (prefers-color-scheme: dark) {
       [data-miladymaxxer-effect="milady"] {
-        background: linear-gradient(180deg, rgb(22, 20, 16) 0%, rgb(17, 15, 12) 100%) !important;
-        outline-color: rgba(160, 140, 55, 0.3) !important;
+        background: linear-gradient(180deg, rgb(32, 26, 14) 0%, rgb(24, 20, 10) 100%) !important;
+        outline-color: rgba(160, 135, 50, 0.4) !important;
         box-shadow:
           0 2px 8px rgba(0, 0, 0, 0.4),
-          0 4px 16px rgba(120, 100, 30, 0.05),
-          inset 0 1px 0 rgba(160, 140, 55, 0.06) !important;
+          0 4px 16px rgba(120, 100, 30, 0.08),
+          inset 0 1px 0 rgba(160, 135, 50, 0.08) !important;
       }
 
       [data-miladymaxxer-effect="milady"][data-miladymaxxer-uncaught="true"] {
@@ -1072,27 +1107,27 @@ export function injectStyles(): void {
       }
     }
 
-    /* Twitter Light mode - gold accents */
+    /* Twitter Light mode - subtle gold (base unliked) */
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgba(255, 251, 235, 1) 0%, rgba(255, 255, 255, 1) 100%) !important;
-      border-color: rgba(212, 175, 55, 0.3) !important;
+      background: linear-gradient(180deg, rgba(255, 253, 244, 1) 0%, rgba(255, 255, 252, 1) 100%) !important;
+      outline-color: rgba(212, 175, 55, 0.2) !important;
       box-shadow:
-        0 2px 4px rgba(184, 134, 11, 0.08),
-        0 4px 12px rgba(212, 175, 55, 0.12),
-        inset 0 1px 0 rgba(255, 223, 100, 0.3) !important;
+        0 2px 4px rgba(184, 134, 11, 0.05),
+        0 4px 12px rgba(212, 175, 55, 0.08),
+        inset 0 1px 0 rgba(255, 223, 100, 0.2) !important;
     }
 
 
-    /* Twitter Dark mode (black) - gold card */
+    /* Twitter Dark mode (black) - gold card (base: distinctly warm) */
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"] {
-      background: linear-gradient(180deg, rgb(22, 20, 16) 0%, rgb(17, 15, 12) 100%) !important;
-      outline-color: rgba(160, 140, 55, 0.3) !important;
+      background: linear-gradient(180deg, rgb(32, 26, 14) 0%, rgb(24, 20, 10) 100%) !important;
+      outline-color: rgba(160, 135, 50, 0.4) !important;
       box-shadow:
         0 2px 8px rgba(0, 0, 0, 0.4),
-        0 4px 16px rgba(120, 100, 30, 0.05),
-        inset 0 1px 0 rgba(160, 140, 55, 0.06) !important;
+        0 4px 16px rgba(120, 100, 30, 0.08),
+        inset 0 1px 0 rgba(160, 135, 50, 0.08) !important;
     }
 
 
@@ -1188,11 +1223,11 @@ export function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="debug-match"]::after {
-      border-color: rgba(231, 76, 60, 0.95);
+      border-color: rgba(46, 204, 113, 0.85);
     }
 
     [data-miladymaxxer-effect="debug-miss"]::after {
-      border-color: rgba(46, 204, 113, 0.75);
+      border-color: rgba(231, 76, 60, 0.75);
     }
 
     .miladymaxxer-placeholder {

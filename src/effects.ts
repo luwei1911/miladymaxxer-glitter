@@ -432,7 +432,12 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
       clearPlaceholder(tweet);
       tweet.style.display = "";
       if (isMatch) {
-        tweet.dataset.miladymaxxerEffect = "milady";
+        // Card theming off — skip visual effects but keep XP/catch
+        if (ctx.settings.cardTheme === "off") {
+          delete tweet.dataset.miladymaxxerEffect;
+        } else {
+          tweet.dataset.miladymaxxerEffect = "milady";
+        }
         // Tighten margin between adjacent milady cards
         if (hasMiladyAbove(tweet)) {
           tweet.dataset.miladymaxxerAdjacentAbove = "true";
@@ -451,25 +456,31 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
         } else {
           delete tweet.dataset.miladymaxxerFade;
         }
-        // Check for 100+ likes - diamond tier
-        if (hasHighLikes(tweet)) {
-          tweet.dataset.miladymaxxerDiamond = "true";
-        } else {
-          delete tweet.dataset.miladymaxxerDiamond;
-        }
-        // Card tier: silver = 0 XP, mint = caught with <10 post likes, gold = default
+        // Card tier based on cardTheme setting
         const handle_ = tweet.dataset.miladymaxxerHandle;
         const isCaught = handle_ ? ctx.isAccountCaught(handle_) : false;
         const postsLiked_ = handle_ ? ctx.getAccountPostsLiked(handle_) : 0;
-        if (!isCaught || postsLiked_ === 0) {
+        const theme = ctx.settings.cardTheme ?? "full";
+        if (theme === "off" || theme === "silver-only") {
+          // Force all milady cards to silver
           tweet.dataset.miladymaxxerUncaught = "true";
           delete tweet.dataset.miladymaxxerMint;
-        } else if (hasLowLikes(tweet)) {
+        } else if (!isCaught || postsLiked_ === 0) {
+          tweet.dataset.miladymaxxerUncaught = "true";
+          delete tweet.dataset.miladymaxxerMint;
+        } else if (hasLowLikes(tweet) || theme === "no-premium") {
+          // no-premium: treat everything as mint (no gold/diamond)
           tweet.dataset.miladymaxxerMint = "true";
           delete tweet.dataset.miladymaxxerUncaught;
         } else {
           delete tweet.dataset.miladymaxxerUncaught;
           delete tweet.dataset.miladymaxxerMint;
+        }
+        // Diamond tier — only in full theme
+        if (theme === "full" && hasHighLikes(tweet)) {
+          tweet.dataset.miladymaxxerDiamond = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerDiamond;
         }
         // Check if user has liked - slightly more gold, trigger catch/level-up
         if (hasUserLiked(tweet)) {

@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   miladyListHandles: [],
   soundEnabled: true,
   showLevelBadge: true,
+  cardTheme: "full" as const,
 };
 
 export const DEFAULT_STATS: DetectionStats = {

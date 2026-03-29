@@ -20,6 +20,7 @@ export async function loadSettings(): Promise<ExtensionSettings> {
     miladyListHandles: DEFAULT_SETTINGS.miladyListHandles,
     soundEnabled: DEFAULT_SETTINGS.soundEnabled,
     showLevelBadge: DEFAULT_SETTINGS.showLevelBadge,
+    cardTheme: DEFAULT_SETTINGS.cardTheme,
   });
   return {
     mode: isMode(stored.mode) ? stored.mode : DEFAULT_SETTINGS.mode,
@@ -27,6 +28,7 @@ export async function loadSettings(): Promise<ExtensionSettings> {
     miladyListHandles: normalizeWhitelistHandles(stored.miladyListHandles),
     soundEnabled: typeof stored.soundEnabled === "boolean" ? stored.soundEnabled : DEFAULT_SETTINGS.soundEnabled,
     showLevelBadge: typeof stored.showLevelBadge === "boolean" ? stored.showLevelBadge : DEFAULT_SETTINGS.showLevelBadge,
+    cardTheme: isCardTheme(stored.cardTheme) ? stored.cardTheme : DEFAULT_SETTINGS.cardTheme,
   };
 }
 
@@ -37,6 +39,7 @@ export async function saveSettings(settings: ExtensionSettings): Promise<void> {
     miladyListHandles: normalizeWhitelistHandles(settings.miladyListHandles),
     soundEnabled: settings.soundEnabled,
     showLevelBadge: settings.showLevelBadge,
+    cardTheme: settings.cardTheme,
   });
 }
 
@@ -110,6 +113,10 @@ export async function resetCollectedAvatars(): Promise<void> {
 
 function isMode(value: unknown): value is ExtensionSettings["mode"] {
   return value === "off" || value === "milady" || value === "debug";
+}
+
+function isCardTheme(value: unknown): value is ExtensionSettings["cardTheme"] {
+  return value === "full" || value === "no-premium" || value === "silver-only" || value === "off";
 }
 
 export function normalizeWhitelistHandles(value: unknown): string[] {

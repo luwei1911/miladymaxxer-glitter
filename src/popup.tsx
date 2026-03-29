@@ -39,7 +39,7 @@ const TAB_LABELS: Array<{ id: TabId; label: string }> = [
 
 const MODE_OPTIONS: Array<{ value: FilterMode; label: string; note: string }> = [
   { value: "off", label: "Off", note: "Do nothing. Show everything." },
-  { value: "milady", label: "MILADY", note: "Elevate milady. Diminish the rest." },
+  { value: "milady", label: "MILADY", note: "Color code milady." },
   { value: "debug", label: "Debug", note: "Show detection markers and scores." },
 ];
 
@@ -71,10 +71,14 @@ const styles = `
     box-sizing: border-box;
   }
 
+  html, body {
+    height: 100%;
+  }
+
   body {
     margin: 0;
     min-width: 320px;
-    background: var(--bg-0);
+    background: #f4ffee;
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
     font-size: 13px;
@@ -487,7 +491,7 @@ const styles = `
     height: 36px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid rgba(47, 77, 12, 0.4);
+    border: 2px solid rgba(47, 77, 12, 0.3);
     box-shadow: 0 2px 6px rgba(47, 77, 12, 0.2);
     flex-shrink: 0;
   }
@@ -892,6 +896,12 @@ function App() {
     await saveSettings(next);
   };
 
+  const setCardTheme = async (theme: string) => {
+    const next = { ...settings(), cardTheme: theme as "full" | "no-premium" | "silver-only" | "off" };
+    setSettings(next);
+    await saveSettings(next);
+  };
+
   const toggleWhitelist = async (handle: string) => {
     const current = settings().whitelistHandles;
     const nextWhitelist = current.includes(handle)
@@ -987,6 +997,15 @@ function App() {
                 aria-label={settings().showLevelBadge ? "Hide level badges" : "Show level badges"}
               />
             </div>
+            <div style="margin-top: 12px; margin-bottom: 12px">
+              <p class="section-note" style="margin-bottom: 6px">Card theming</p>
+              <div class="sort-toggle" style="width: 100%">
+                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "full")} onClick={() => void setCardTheme("full")}>Full</button>
+                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "no-premium")} onClick={() => void setCardTheme("no-premium")}>No diamond/gold</button>
+                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "silver-only")} onClick={() => void setCardTheme("silver-only")}>Silver only</button>
+                <button type="button" class="sort-button" style="flex:1" data-active={String(settings().cardTheme === "off")} onClick={() => void setCardTheme("off")}>Off</button>
+              </div>
+            </div>
           </section>
         </Show>
 
@@ -1012,13 +1031,15 @@ function App() {
           <section class="panel" style="position: relative">
             <span class="tooltip-trigger">?</span>
             <div class="tooltip-content">
-              Like milady posts to earn XP and level up!<br/>
-              Level = floor(√ posts liked)<br/><br/>
-              <b>Card tiers:</b><br/>
+              <b>Inverse quadratic progression</b><br/>
+              Level = floor(√ posts liked)<br/>
+              Player level = floor(√(likes / 3))<br/><br/>
+              <b>Card tiers (by post likes):</b><br/>
               Silver — uncaught (Lv.0)<br/>
-              Mint — caught, &lt;50 likes<br/>
-              Gold — 50+ likes<br/>
-              Diamond — 150+ likes
+              Mint — caught, &lt;75 likes<br/>
+              Gold — 75+ likes<br/>
+              Diamond — 250+ likes<br/><br/>
+              Allow-listed accounts give 25% player XP.
             </div>
             <p class="collection-stats">
               {formatNumber(caughtCount())} caught / {formatNumber(seenCount())} seen · {catchRateLabel()}
