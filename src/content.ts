@@ -1,5 +1,5 @@
 import { DEFAULT_SETTINGS, DEFAULT_STATS } from "./shared/constants";
-import { getLevel } from "./shared/levels";
+import { getLevel, getLevelProgress } from "./shared/levels";
 import { normalizeProfileImageUrl } from "./shared/image-core";
 import {
   loadCollectedAvatars,
@@ -385,6 +385,7 @@ async function processProfilePage(): Promise<void> {
     if (primaryColumn) {
       primaryColumn.dataset.miladymaxxerProfile = "milady";
     }
+    injectProfileLevelBadge(profileHandle);
     return;
   }
 
@@ -398,6 +399,7 @@ async function processProfilePage(): Promise<void> {
     if (primaryColumn) {
       if (result.matched) {
         primaryColumn.dataset.miladymaxxerProfile = "milady";
+        injectProfileLevelBadge(profileHandle);
       } else {
         delete primaryColumn.dataset.miladymaxxerProfile;
       }
@@ -554,6 +556,36 @@ function findAuthor(tweet: HTMLElement): { handle: string; displayName: string |
     handle,
     displayName: userName ? extractDisplayName(userName) : null,
   };
+}
+
+function injectProfileLevelBadge(handle: string): void {
+  if (!matchedAccounts || !settings.showLevelBadge) return;
+  const account = matchedAccounts[handle];
+  if (!account?.caught) return;
+
+  const progress = getLevelProgress(account.postsLiked);
+  if (progress.level < 1) return;
+
+  // Remove existing badge if present
+  const existing = document.querySelector(".miladymaxxer-profile-level");
+  if (existing) existing.remove();
+
+  // Place next to the Follow/Following button row
+  const followButton = document.querySelector<HTMLElement>(
+    '[data-testid="primaryColumn"] [data-testid$="-follow"], [data-testid="primaryColumn"] [data-testid$="-unfollow"]',
+  );
+  const buttonRow = followButton?.parentElement;
+  if (!buttonRow) return;
+
+  const pct = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 100) : 0;
+
+  const badge = document.createElement("div");
+  badge.className = "miladymaxxer-profile-level";
+  badge.innerHTML =
+    `<span class="miladymaxxer-profile-level-text">Lv.${progress.level}</span>` +
+    `<div class="miladymaxxer-profile-level-bar"><div class="miladymaxxer-profile-level-bar-fill" style="width:${pct}%"></div></div>` +
+    `<span class="miladymaxxer-profile-level-detail">${progress.current}/${progress.needed}</span>`;
+  buttonRow.insertBefore(badge, buttonRow.firstChild);
 }
 
 function resolveSelfHandle(): string | null {

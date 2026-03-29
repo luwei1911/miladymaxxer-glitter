@@ -113,8 +113,10 @@ export function injectStyles(): void {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
-      margin: 4px 0 !important;
-      border: 1px solid rgba(212, 175, 55, 0.4) !important;
+      margin: 0 !important;
+      border: none !important;
+      outline: 1px solid rgba(212, 175, 55, 0.4) !important;
+      outline-offset: -1px !important;
       box-shadow:
         0 4px 8px rgba(0, 0, 0, 0.1),
         0 8px 24px rgba(212, 175, 55, 0.2),
@@ -253,7 +255,6 @@ export function injectStyles(): void {
 
     /* Enhanced gold for posts user has liked - 20% more gold */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
-      border-color: rgba(212, 175, 55, 0.5) !important;
       box-shadow:
         0 2px 6px rgba(184, 134, 11, 0.12),
         0 4px 18px rgba(212, 175, 55, 0.2),
@@ -277,7 +278,6 @@ export function injectStyles(): void {
     html[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(255, 255, 255)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
       background: linear-gradient(180deg, rgba(255, 243, 200, 1) 0%, rgba(255, 250, 230, 1) 100%) !important;
-      border-color: rgba(200, 160, 50, 0.45) !important;
       box-shadow:
         0 2px 6px rgba(184, 134, 11, 0.12),
         0 4px 16px rgba(212, 175, 55, 0.18),
@@ -288,7 +288,6 @@ export function injectStyles(): void {
     html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"],
     body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-effect="milady"][data-miladymaxxer-liked="true"] {
       background: linear-gradient(180deg, rgb(48, 40, 16) 0%, rgb(36, 30, 12) 100%) !important;
-      border-color: rgba(190, 155, 55, 0.45) !important;
       box-shadow:
         0 4px 16px rgba(150, 120, 42, 0.08),
         inset 0 1px 0 rgba(220, 180, 70, 0.16) !important;
@@ -487,45 +486,61 @@ export function injectStyles(): void {
 
     /* ===== PROFILE PAGE STYLING ===== */
 
-    /* Gold rim around milady profile avatar */
-    [data-miladymaxxer-profile="milady"] a[href*="/photo"] img[src*="profile_images"] {
+    /* Gold rim and glow around milady profile avatar */
+    [data-miladymaxxer-profile="milady"] a[href*="/photo"] img {
       border: 3px solid #d4af37 !important;
-      box-shadow: 0 0 12px rgba(212, 175, 55, 0.5) !important;
+      box-shadow: 0 0 16px rgba(212, 175, 55, 0.4), 0 0 32px rgba(212, 175, 55, 0.15) !important;
     }
 
-    /* Profile card - light mode */
-    [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]) {
+    /* Subtle gold border on the header photo */
+    [data-miladymaxxer-profile="milady"] a[href$="/header_photo"] {
+      outline: 1px solid rgba(212, 175, 55, 0.25) !important;
+      outline-offset: -1px !important;
+    }
+
+    /* Profile level badge — sits in the button row */
+    .miladymaxxer-profile-level {
+      display: flex !important;
+      align-items: center !important;
+      gap: 6px !important;
+      padding: 6px 12px !important;
       border: 1px solid rgba(212, 175, 55, 0.3) !important;
-      border-radius: 12px !important;
-      margin: 8px 4px !important;
-      box-shadow:
-        0 2px 4px rgba(0, 0, 0, 0.06),
-        0 4px 12px rgba(212, 175, 55, 0.1),
-        inset 0 1px 0 rgba(255, 215, 0, 0.1) !important;
-      overflow: hidden !important;
-      background: rgba(255, 252, 240, 1) !important;
-    }
-
-    /* Force transparent backgrounds on profile children to prevent white seams */
-    [data-miladymaxxer-profile="milady"] [data-testid="UserName"],
-    [data-miladymaxxer-profile="milady"] [data-testid="UserDescription"],
-    [data-miladymaxxer-profile="milady"] [data-testid="UserProfileHeader_Items"],
-    [data-miladymaxxer-profile="milady"] [data-testid="UserName"] *,
-    [data-miladymaxxer-profile="milady"] [data-testid="UserDescription"] *,
-    [data-miladymaxxer-profile="milady"] [data-testid="UserProfileHeader_Items"] * {
+      border-radius: 9999px !important;
       background: transparent !important;
-      background-color: transparent !important;
     }
 
-    /* Dark mode profile card */
-    html[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]),
-    body[style*="background-color: rgb(0, 0, 0)"] [data-miladymaxxer-profile="milady"] > div > div > div:has(a[href$="/header_photo"]) {
-      background: linear-gradient(180deg, rgb(28, 23, 10) 0%, rgb(20, 16, 7) 100%) !important;
-      border-color: rgba(160, 130, 45, 0.35) !important;
-      box-shadow:
-        0 4px 14px rgba(140, 112, 40, 0.06),
-        inset 0 1px 0 rgba(180, 145, 55, 0.1) !important;
+    .miladymaxxer-profile-level-text {
+      color: #d4af37 !important;
+      font-size: 14px !important;
+      font-weight: 700 !important;
+      white-space: nowrap !important;
     }
+
+    .miladymaxxer-profile-level-bar {
+      width: 40px !important;
+      height: 4px !important;
+      border-radius: 2px !important;
+      background: rgba(212, 175, 55, 0.15) !important;
+      overflow: hidden !important;
+    }
+
+    .miladymaxxer-profile-level-bar-fill {
+      height: 100% !important;
+      border-radius: 2px !important;
+      background: linear-gradient(90deg, #d4af37, #f0c850) !important;
+    }
+
+    .miladymaxxer-profile-level-detail {
+      color: rgb(113, 118, 123) !important;
+      font-size: 12px !important;
+      white-space: nowrap !important;
+    }
+
+    /* Gold accent on the "Follows you" badge and handle area */
+    [data-miladymaxxer-profile="milady"] [data-testid="userFollowIndicator"] {
+      border-color: rgba(212, 175, 55, 0.3) !important;
+    }
+
 
     /* Gold Follow back button on profile pages */
     [data-miladymaxxer-profile="milady"] [aria-label*="Follow back"],
@@ -587,6 +602,7 @@ export function injectStyles(): void {
 
     /* ===== END PROFILE PAGE STYLING ===== */
 
+
     /* ===== EDGE FADE ===== */
     /* Mask only the ::before and ::after overlays — tweet content and connector lines stay visible */
 
@@ -599,9 +615,7 @@ export function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"] {
-      border-top-color: transparent !important;
-      border-image: linear-gradient(to bottom, transparent 0%, rgba(212, 175, 55, 0.4) 3%) 1 !important;
-      border-image-slice: 1 !important;
+      outline-color: transparent !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="top"]::before,
@@ -618,8 +632,7 @@ export function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"] {
-      border-image: linear-gradient(to bottom, transparent 0%, rgba(212, 175, 55, 0.4) 3%, rgba(212, 175, 55, 0.4) 97%, transparent 100%) 1 !important;
-      border-image-slice: 1 !important;
+      outline-color: transparent !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="both"]::before,
@@ -637,8 +650,7 @@ export function injectStyles(): void {
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"] {
-      border-image: linear-gradient(to bottom, rgba(212, 175, 55, 0.4) 97%, transparent 100%) 1 !important;
-      border-image-slice: 1 !important;
+      outline-color: transparent !important;
     }
 
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade="bottom"]::before,
@@ -652,10 +664,12 @@ export function injectStyles(): void {
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade]:hover::before,
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade]:hover::after {
       border-radius: 12px !important;
-      border-image: none !important;
-      border-color: rgba(212, 175, 55, 0.4) !important;
       -webkit-mask-image: none !important;
       mask-image: none !important;
+    }
+
+    [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade]:hover {
+      outline-color: rgba(212, 175, 55, 0.4) !important;
     }
 
     /* Reset styling for quoted tweets inside milady posts - give them opaque background */
