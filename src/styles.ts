@@ -167,7 +167,7 @@ export function injectStyles(): void {
       position: relative !important;
       z-index: 1 !important;
       border-radius: 12px !important;
-      margin: 6px 6px 12px !important;
+      margin: 6px 6px 8px !important;
       border: none !important;
       outline: 1px solid rgba(212, 175, 55, 0.4) !important;
       outline-offset: -1px !important;
@@ -749,15 +749,13 @@ export function injectStyles(): void {
       outline-offset: -1px !important;
     }
 
-    /* Profile level badge — positioned below button row, no layout shift */
+    /* Profile level badge — inline after @handle */
     .miladymaxxer-profile-level {
-      position: absolute !important;
-      top: 100% !important;
-      right: 0 !important;
       display: inline-flex !important;
       align-items: center !important;
       gap: 6px !important;
-      margin-top: 4px !important;
+      margin-left: 8px !important;
+      vertical-align: middle !important;
       white-space: nowrap !important;
     }
 

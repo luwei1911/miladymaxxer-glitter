@@ -694,8 +694,8 @@ function injectProfileLevelBadge(handle: string): void {
   const postsLiked = account?.postsLiked ?? 0;
   const progress = getLevelProgress(postsLiked);
 
-  // Remove existing elements if present
-  document.querySelector(".miladymaxxer-profile-level")?.remove();
+  // Check if we already have a badge with the same content — skip if unchanged
+  const existingBadge = document.querySelector(".miladymaxxer-profile-level");
 
   const pct = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 100) : 0;
   const filled = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 5) : 0;
@@ -727,17 +727,17 @@ function injectProfileLevelBadge(handle: string): void {
     `<span class="${pillClass}">Milady Lvl: ${progress.level}</span>` +
     `<span class="miladymaxxer-profile-level-xp">${ascii} ${pct}%</span>`;
 
-  const buttonRow = followBtn?.parentElement?.parentElement;
-  if (buttonRow) {
-    // Make parent relative so we can position absolutely below
-    buttonRow.style.position = "relative";
-    buttonRow.appendChild(badge);
-    return;
+  // If badge already exists and content matches, keep it
+  if (existingBadge?.isConnected) {
+    if (existingBadge.textContent?.includes(`Lvl: ${progress.level}`)) return;
+    existingBadge.remove();
   }
 
-  // Fallback: inject after @handle span
+  // Try multiple injection strategies
   const profileUserName = document.querySelector<HTMLElement>(PROFILE_USER_NAME);
   if (!profileUserName) return;
+
+  // Strategy 1: after @handle span
   const allSpans = profileUserName.querySelectorAll("span");
   for (const span of Array.from(allSpans)) {
     const text = span.textContent?.trim();
@@ -746,6 +746,9 @@ function injectProfileLevelBadge(handle: string): void {
       return;
     }
   }
+
+  // Strategy 2: append to the UserName element itself
+  profileUserName.appendChild(badge);
 }
 
 function injectPlayerProfileBadge(): void {
@@ -1102,6 +1105,9 @@ function updatePlayerLevelBadge(): void {
     }
   }
   prevPlayerLevel = newLevel;
+
+  // Update extension badge with player level
+  try { chrome.runtime.sendMessage({ type: "badge", count: newLevel > 0 ? newLevel : 0 }); } catch {}
 
   let badge = wrapper.querySelector(".miladymaxxer-player-level") as HTMLElement | null;
   const filled = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 4) : 0;
