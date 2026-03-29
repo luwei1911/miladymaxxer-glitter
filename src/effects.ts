@@ -122,6 +122,7 @@ export function clearVisualState(tweet: HTMLElement): void {
   delete tweet.dataset.miladymaxxerFade;
   delete tweet.dataset.miladymaxxerAdjacentAbove;
   delete tweet.dataset.miladymaxxerAdjacentBelow;
+  delete tweet.dataset.miladymaxxerRetweeted;
 }
 
 export function clearPlaceholder(tweet: HTMLElement): void {
@@ -165,16 +166,20 @@ function getLikeCount(tweet: HTMLElement): number {
 
 export function hasLowLikes(tweet: HTMLElement): boolean {
   const count = getLikeCount(tweet);
-  return count >= 0 && count < 50;
+  return count >= 0 && count < 75;
 }
 
 export function hasHighLikes(tweet: HTMLElement): boolean {
-  return getLikeCount(tweet) >= 150;
+  return getLikeCount(tweet) >= 250;
 }
 
 export function hasUserLiked(tweet: HTMLElement): boolean {
   // If unlike button exists, user has liked this post
   return !!tweet.querySelector<HTMLElement>(UNLIKE_BUTTON);
+}
+
+export function hasUserRetweeted(tweet: HTMLElement): boolean {
+  return !!tweet.querySelector('[data-testid="unretweet"]');
 }
 
 export function doesUserFollow(tweet: HTMLElement): boolean {
@@ -498,6 +503,12 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
               ctx.onUnlike(handle);
             }
           }
+        }
+        // Retweet boost — thicker outline
+        if (hasUserRetweeted(tweet)) {
+          tweet.dataset.miladymaxxerRetweeted = "true";
+        } else {
+          delete tweet.dataset.miladymaxxerRetweeted;
         }
         updateLevelBadge(ctx, tweet);
         updateMiladyListButton(ctx, tweet);

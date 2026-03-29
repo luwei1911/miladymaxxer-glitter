@@ -1,9 +1,10 @@
-import { DEFAULT_SETTINGS, DEFAULT_STATS } from "./shared/constants";
-import { getLevel, getLevelProgress } from "./shared/levels";
+import { DEFAULT_SETTINGS, DEFAULT_STATS, DEFAULT_PLAYER_STATS } from "./shared/constants";
+import { getLevel, getLevelProgress, getPlayerLevel, getPlayerLevelProgress } from "./shared/levels";
 import { normalizeProfileImageUrl } from "./shared/image-core";
 import {
   loadCollectedAvatars,
   loadMatchedAccounts,
+  loadPlayerStats,
   loadSettings,
   loadStats,
   normalizeCollectedAvatars,
@@ -13,6 +14,7 @@ import {
   normalizeWhitelistHandles,
   saveCollectedAvatars,
   saveMatchedAccounts,
+  savePlayerStats,
   saveStats,
 } from "./shared/storage";
 import type {
@@ -21,6 +23,7 @@ import type {
   DetectionStats,
   ExtensionSettings,
   MatchedAccountMap,
+  PlayerStats,
 } from "./shared/types";
 
 import { detectAvatar } from "./detection";
@@ -81,7 +84,9 @@ let delayedScanTimer: number | null = null;
 let stats: DetectionStats | null = null;
 let matchedAccounts: MatchedAccountMap | null = null;
 let collectedAvatars: CollectedAvatarMap | null = null;
+let playerStats: PlayerStats = DEFAULT_PLAYER_STATS;
 let localStateWriteScheduled = false;
+let playerStatsWriteScheduled = false;
 let selfHandle: string | null = null;
 const creditedReplies = new WeakSet<HTMLElement>();
 
@@ -112,13 +117,15 @@ void boot();
 
 async function boot(): Promise<void> {
   injectStyles();
-  [settings, stats, matchedAccounts, collectedAvatars] = await Promise.all([
+  [settings, stats, matchedAccounts, collectedAvatars, playerStats] = await Promise.all([
     loadSettings(),
     loadStats(),
     loadMatchedAccounts(),
     loadCollectedAvatars(),
+    loadPlayerStats(),
   ]);
   setSoundSettings(settings);
+  prevPlayerLevel = getPlayerLevel(playerStats.totalLikesGiven);
   observeStorage();
   let mutationDebounceTimer: number | null = null;
   const observer = new MutationObserver(() => {
@@ -133,6 +140,7 @@ async function boot(): Promise<void> {
       attachDMSounds();
       attachGlobalMediaHoverSounds();
       replaceXLogo();
+      updatePlayerLevelBadge();
       observeIncomingMessages();
     }, 150);
   });
@@ -141,6 +149,7 @@ async function boot(): Promise<void> {
     subtree: true,
   });
   window.addEventListener("scroll", scheduleDelayedProcessVisibleTweets, { passive: true });
+  window.addEventListener("resize", () => updatePlayerLevelBadge(), { passive: true });
   document.addEventListener("click", () => scheduleDelayedProcessVisibleTweets(), { passive: true, capture: true });
   window.setInterval(() => {
     scheduleProcessVisibleTweets();
@@ -376,11 +385,24 @@ async function processProfilePage(): Promise<void> {
                                 profileHeader.closest(PROFILE_CONTAINER_FALLBACK);
   if (!userProfileContainer) return;
 
-  if (processed.get(userProfileContainer as HTMLElement) === normalizedUrl) return;
-  processed.set(userProfileContainer as HTMLElement, normalizedUrl);
-
   // Extract profile handle from URL
   const profileHandle = normalizeHandle(window.location.pathname.split("/")[1] ?? "");
+
+  // Always refresh the badge even if already processed
+  if (profileHandle) {
+    const primaryColumn = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
+    if (primaryColumn?.dataset.miladymaxxerProfile === "milady") {
+      injectProfileLevelBadge(profileHandle);
+    }
+    // Also refresh player badge on own profile
+    const self = resolveSelfHandle();
+    if (self && profileHandle === self) {
+      injectPlayerProfileBadge();
+    }
+  }
+
+  if (processed.get(userProfileContainer as HTMLElement) === normalizedUrl) return;
+  processed.set(userProfileContainer as HTMLElement, normalizedUrl);
 
   // Manual milady list — skip detection for profile page too
   if (profileHandle && settings.miladyListHandles.includes(profileHandle)) {
@@ -390,6 +412,12 @@ async function processProfilePage(): Promise<void> {
     }
     injectProfileLevelBadge(profileHandle);
     return;
+  }
+
+  // Check if this is the user's own profile — show player level badge
+  const self = resolveSelfHandle();
+  if (self && profileHandle === self) {
+    injectPlayerProfileBadge();
   }
 
   try {
@@ -496,6 +524,13 @@ function replaceXLogo(): void {
     const logoUrl = chrome.runtime.getURL("milady-logo.png");
     const homeLink = document.querySelector<HTMLAnchorElement>(HOME_LINK);
     if (homeLink && !homeLink.querySelector(`.${LOGO_REPLACEMENT_CLASS}`)) {
+      // Ensure the logo area doesn't get clipped when sidebar narrows (DMs)
+      homeLink.style.overflow = "visible";
+      let parent = homeLink.parentElement;
+      for (let i = 0; i < 4 && parent; i++) {
+        parent.style.overflow = "visible";
+        parent = parent.parentElement;
+      }
       Array.from(homeLink.children).forEach(child => {
         (child as HTMLElement).style.display = "none";
       });
@@ -506,6 +541,7 @@ function replaceXLogo(): void {
         position: relative;
         display: inline-block;
         transform: translate(10px, 10px);
+        z-index: 10000;
       `;
 
       const img = document.createElement("img");
@@ -516,21 +552,21 @@ function replaceXLogo(): void {
         height: 30px;
         object-fit: contain;
         image-rendering: pixelated;
-        border: 1.5px solid rgba(212, 175, 55, 0.5);
+        border: 1.5px solid rgba(47, 77, 12, 0.4);
         border-radius: 6px;
-        box-shadow: 0 0 8px rgba(212, 175, 55, 0.3), 0 0 16px rgba(212, 175, 55, 0.1);
+        box-shadow: 0 0 8px rgba(47, 77, 12, 0.3), 0 0 16px rgba(47, 77, 12, 0.1);
         transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
         cursor: pointer;
       `;
 
-      // Typewriter text element
+      // Typewriter text element — to the right of logo
       const typeText = document.createElement("span");
       typeText.style.cssText = `
         position: absolute;
-        left: 50%;
-        top: 100%;
-        transform: translateX(-50%);
-        margin-top: 2px;
+        left: 100%;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-left: -44px;
         color: rgb(113, 118, 123);
         font-size: 10px;
         font-weight: 600;
@@ -544,13 +580,13 @@ function replaceXLogo(): void {
       // Hover animation
       img.addEventListener("mouseenter", () => {
         img.style.transform = "translateY(-1px) scale(1.05)";
-        img.style.boxShadow = "0 0 12px rgba(212, 175, 55, 0.5), 0 0 24px rgba(212, 175, 55, 0.2)";
+        img.style.boxShadow = "0 0 12px rgba(47, 77, 12, 0.5), 0 0 24px rgba(47, 77, 12, 0.2)";
         playLogoHoverSound();
       }, { passive: true });
 
       img.addEventListener("mouseleave", () => {
         img.style.transform = "";
-        img.style.boxShadow = "0 0 8px rgba(212, 175, 55, 0.3), 0 0 16px rgba(212, 175, 55, 0.1)";
+        img.style.boxShadow = "0 0 8px rgba(47, 77, 12, 0.3), 0 0 16px rgba(47, 77, 12, 0.1)";
       }, { passive: true });
 
       // Click: tune + typewriter "milady"
@@ -675,18 +711,19 @@ function injectProfileLevelBadge(handle: string): void {
     tooltipLines.push(`Detection score: ${(account.lastDetectionScore * 100).toFixed(0)}%`);
   }
 
+  // Detect if user follows this milady — grey pill if not following
+  const primaryCol = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
+  if (!primaryCol) return;
+  const followBtn = primaryCol.querySelector<HTMLElement>('[data-testid$="-follow"], [data-testid$="-unfollow"]');
+  const isFollowing = followBtn ? !!followBtn.closest('[data-testid$="-unfollow"]') || !!followBtn.querySelector('[aria-label*="Following"]') : false;
+  const pillClass = isFollowing ? "miladymaxxer-profile-level-pill" : "miladymaxxer-profile-level-pill miladymaxxer-profile-level-pill-grey";
+
   const badge = document.createElement("div");
   badge.className = "miladymaxxer-profile-level";
   badge.title = tooltipLines.join("\n");
   badge.innerHTML =
-    `<span class="miladymaxxer-profile-level-pill">Milady Lvl: ${progress.level}</span>` +
-    `<span class="miladymaxxer-profile-level-xp">XP: ${progress.current}/${progress.needed} ${ascii}</span>`;
-
-  // Try to inject below the button row (Following / mail / more buttons)
-  const primaryCol = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
-  if (!primaryCol) return;
-
-  const followBtn = primaryCol.querySelector<HTMLElement>('[data-testid$="-follow"], [data-testid$="-unfollow"]');
+    `<span class="${pillClass}">Milady Lvl: ${progress.level}</span>` +
+    `<span class="miladymaxxer-profile-level-xp">${ascii} ${pct}%</span>`;
   const buttonRow = followBtn?.parentElement?.parentElement;
   if (buttonRow) {
     // Make parent relative so we can position absolutely below
@@ -705,6 +742,36 @@ function injectProfileLevelBadge(handle: string): void {
       span.after(badge);
       return;
     }
+  }
+}
+
+function injectPlayerProfileBadge(): void {
+  if (!settings.showLevelBadge) return;
+
+  // Remove existing
+  document.querySelector(".miladymaxxer-player-profile-level")?.remove();
+
+  const progress = getPlayerLevelProgress(playerStats.totalLikesGiven);
+  const pct = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 100) : 0;
+  const filled = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 5) : 0;
+  const ascii = "\u2593".repeat(filled) + "\u2591".repeat(5 - filled);
+
+  const badge = document.createElement("div");
+  badge.className = "miladymaxxer-player-profile-level";
+  badge.title = `Player Level ${progress.level} \u00b7 ${progress.current}/${progress.needed} to next level\n${playerStats.totalLikesGiven} total milady likes`;
+  badge.innerHTML =
+    `<span class="miladymaxxer-profile-level-pill">Milady Lvl: ${progress.level}</span>` +
+    `<span class="miladymaxxer-profile-level-xp">${ascii} ${pct}%</span>`;
+
+  // Inject below the button row, same as milady profile badges
+  const primaryCol = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
+  if (!primaryCol) return;
+
+  const followBtn = primaryCol.querySelector<HTMLElement>('[data-testid$="-follow"], [data-testid$="-unfollow"]');
+  const buttonRow = followBtn?.parentElement?.parentElement;
+  if (buttonRow) {
+    buttonRow.style.position = "relative";
+    buttonRow.appendChild(badge);
   }
 }
 
@@ -834,7 +901,12 @@ function markAccountCaught(handle: string): void {
   existing.caughtAt = new Date().toISOString();
   existing.postsLiked += 1;
 
+  // Allow-listed accounts give 25% player XP to prevent gaming
+  const isOnList = settings.miladyListHandles.includes(handle);
+  playerStats.totalLikesGiven += isOnList ? 0.25 : 1;
+  schedulePlayerStatsWrite();
   scheduleLocalStateWrite();
+  updatePlayerLevelBadge();
   playCatchSound();
 }
 
@@ -848,7 +920,11 @@ function handleLevelUp(handle: string, _newLevel: number): void {
   existing.postsLiked += 1;
   const newLevel = getLevel(existing.postsLiked);
 
+  const isOnList = settings.miladyListHandles.includes(handle);
+  playerStats.totalLikesGiven += isOnList ? 0.25 : 1;
+  schedulePlayerStatsWrite();
   scheduleLocalStateWrite();
+  updatePlayerLevelBadge();
 
   if (newLevel > prevLevel) {
     playLevelUpSound();
@@ -931,7 +1007,11 @@ function handleUnlike(handle: string): void {
   if (!existing || !existing.caught || existing.postsLiked <= 0) return;
 
   existing.postsLiked = Math.max(0, existing.postsLiked - 1);
+  const isOnList = settings.miladyListHandles.includes(handle);
+  playerStats.totalLikesGiven = Math.max(0, playerStats.totalLikesGiven - (isOnList ? 0.25 : 1));
+  schedulePlayerStatsWrite();
   scheduleLocalStateWrite();
+  updatePlayerLevelBadge();
 }
 
 function recordMatchedAccount(handle: string, displayName: string | null, score: number | null): void {
@@ -1005,6 +1085,69 @@ function scheduleLocalStateWrite(): void {
   }, 250);
 }
 
+function schedulePlayerStatsWrite(): void {
+  if (playerStatsWriteScheduled) return;
+  playerStatsWriteScheduled = true;
+  window.setTimeout(async () => {
+    playerStatsWriteScheduled = false;
+    await savePlayerStats(playerStats);
+  }, 250);
+}
+
+let prevPlayerLevel = 0;
+
+function updatePlayerLevelBadge(): void {
+  const logoImg = document.querySelector(`.${LOGO_REPLACEMENT_CLASS}`);
+  if (!logoImg) return;
+  const wrapper = logoImg.parentElement;
+  if (!wrapper) return;
+
+  const progress = getPlayerLevelProgress(playerStats.totalLikesGiven);
+  const newLevel = progress.level;
+
+  // Check for level up
+  if (newLevel > prevPlayerLevel && prevPlayerLevel > 0) {
+    playLevelUpSound();
+    const existing = wrapper.querySelector(".miladymaxxer-player-level") as HTMLElement | null;
+    if (existing) {
+      existing.style.transform = "scale(1.3)";
+      existing.style.transition = "transform 0.3s ease";
+      setTimeout(() => {
+        existing.style.transform = "";
+      }, 400);
+    }
+  }
+  prevPlayerLevel = newLevel;
+
+  let badge = wrapper.querySelector(".miladymaxxer-player-level") as HTMLElement | null;
+  const filled = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 4) : 0;
+  const ascii = "\u2593".repeat(filled) + "\u2591".repeat(4 - filled);
+  const pct = progress.needed > 0 ? Math.round((progress.current / progress.needed) * 100) : 0;
+
+  // Responsive: detect sidebar width and adjust text
+  const sidebar = logoImg.closest("header, nav")?.parentElement ?? logoImg.closest('[data-testid="primaryColumn"]')?.previousElementSibling;
+  const sidebarWidth = sidebar ? (sidebar as HTMLElement).offsetWidth : window.innerWidth;
+  let text: string;
+  if (sidebarWidth < 88) {
+    // Ultra narrow (collapsed sidebar) — just level number
+    text = `${progress.level}`;
+  } else if (sidebarWidth < 200) {
+    // Narrow (DMs open) — compact
+    text = `Lv.${progress.level} ${pct}%`;
+  } else {
+    // Normal — full display
+    text = `Lv. ${progress.level} ${ascii} ${pct}%`;
+  }
+
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.className = "miladymaxxer-player-level";
+    wrapper.appendChild(badge);
+  }
+  badge.textContent = text;
+  badge.title = `Player Level ${progress.level} \u00b7 ${progress.current}/${progress.needed} to next level\n${playerStats.totalLikesGiven} total milady likes`;
+}
+
 function mergeUniqueStrings(
   existing: string[] | undefined,
   incoming: string | null,
@@ -1059,6 +1202,12 @@ function observeStorage(): void {
 
     if (area === "local" && changes.collectedAvatars) {
       collectedAvatars = normalizeCollectedAvatars(changes.collectedAvatars.newValue);
+    }
+
+    if (area === "local" && changes.playerStats) {
+      const raw = changes.playerStats.newValue;
+      playerStats = raw && typeof raw === "object" ? { totalLikesGiven: typeof raw.totalLikesGiven === "number" ? raw.totalLikesGiven : 0 } : DEFAULT_PLAYER_STATS;
+      updatePlayerLevelBadge();
     }
   });
 }
