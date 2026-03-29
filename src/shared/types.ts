@@ -55,6 +55,10 @@ export interface CollectedAvatar {
 
 export type CollectedAvatarMap = Record<string, CollectedAvatar>;
 
+export interface PlayerStats {
+  totalLikesGiven: number;
+}
+
 export interface ModelMetadata {
   architecture?: string;
   classNames?: string[];
