@@ -152,13 +152,11 @@ export function injectStyles(): void {
 
     /* Player profile badge — same layout as milady profile badge */
     .miladymaxxer-player-profile-level {
-      position: absolute !important;
-      top: 100% !important;
-      left: 0 !important;
       display: inline-flex !important;
       align-items: center !important;
       gap: 6px !important;
-      margin-top: 4px !important;
+      margin-left: 8px !important;
+      vertical-align: middle !important;
       white-space: nowrap !important;
     }
 
@@ -757,10 +755,25 @@ export function injectStyles(): void {
       margin-left: 8px !important;
       vertical-align: middle !important;
       white-space: nowrap !important;
+      cursor: pointer !important;
+      z-index: 100 !important;
     }
 
     .miladymaxxer-profile-level {
       pointer-events: auto !important;
+      cursor: pointer !important;
+    }
+
+    .miladymaxxer-profile-level-typewriter {
+      display: inline !important;
+      color: #2f4d0c !important;
+      font-size: 10px !important;
+      font-weight: 600 !important;
+      letter-spacing: 1px !important;
+      white-space: nowrap !important;
+      opacity: 0 !important;
+      transition: opacity 0.3s ease !important;
+      margin-left: 6px !important;
     }
 
     .miladymaxxer-profile-level-pill {
@@ -928,10 +941,6 @@ export function injectStyles(): void {
       mask-image: linear-gradient(to bottom, black 95%, transparent 100%) !important;
     }
 
-    /* Retweeted boost — thicker outline for extra engagement */
-    [data-miladymaxxer-effect="milady"][data-miladymaxxer-retweeted="true"] {
-      outline-width: 2px !important;
-    }
 
     /* Hover: remove fade, restore rounded corners */
     [data-miladymaxxer-effect="milady"][data-miladymaxxer-fade]:hover,

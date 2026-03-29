@@ -44,6 +44,7 @@ export const revealed = new WeakMap<HTMLElement, string>();
 let miladyLikesThisSession = 0;
 const countedLikes = new WeakSet<HTMLElement>();
 const xpCreditedKeys = new Set<string>();
+const seenTweets = new WeakSet<HTMLElement>(); // tracks tweets we've seen before (for like transition detection)
 
 // ---------------------------------------------------------------------------
 // Internal helpers
@@ -73,6 +74,18 @@ function getEdgeFade(tweet: HTMLElement): string {
   if (above) return "top";
   if (below) return "bottom";
   return "none";
+}
+
+function isOnProfilePage(): boolean {
+  // Profile pages have /{handle} as the path with no /status/ or /home
+  const path = window.location.pathname;
+  return !path.includes("/status/") && !path.includes("/home") && !path.includes("/search") && !path.includes("/explore") && !path.includes("/notifications") && /^\/[^/]+\/?$/.test(path);
+}
+
+function isCellInThread(container: Element): boolean {
+  // Twitter removes the bottom border on cells that are part of a reply chain
+  const style = getComputedStyle(container);
+  return style.borderBottomWidth === "0px" || style.borderBottomStyle === "none";
 }
 
 function hasMiladyAbove(tweet: HTMLElement): boolean {
@@ -438,20 +451,19 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
         } else {
           tweet.dataset.miladymaxxerEffect = "milady";
         }
-        // Tighten margin between adjacent milady cards (thread view only)
-        if (/\/status\//.test(window.location.href)) {
-          if (hasMiladyAbove(tweet)) {
-            tweet.dataset.miladymaxxerAdjacentAbove = "true";
-          } else {
-            delete tweet.dataset.miladymaxxerAdjacentAbove;
-          }
-          if (hasMiladyBelow(tweet)) {
-            tweet.dataset.miladymaxxerAdjacentBelow = "true";
-          } else {
-            delete tweet.dataset.miladymaxxerAdjacentBelow;
-          }
+        // Tighten margin between adjacent milady cards in threads
+        const inStatusView = /\/status\//.test(window.location.href);
+        const onProfile = isOnProfilePage();
+        const cellDiv = tweet.closest(CELL_INNER_DIV) ?? tweet.parentElement;
+        const canTighten = inStatusView || (!onProfile && cellDiv && isCellInThread(cellDiv));
+        if (canTighten && hasMiladyAbove(tweet)) {
+          tweet.dataset.miladymaxxerAdjacentAbove = "true";
         } else {
           delete tweet.dataset.miladymaxxerAdjacentAbove;
+        }
+        if (canTighten && hasMiladyBelow(tweet)) {
+          tweet.dataset.miladymaxxerAdjacentBelow = "true";
+        } else {
           delete tweet.dataset.miladymaxxerAdjacentBelow;
         }
         // Set edge fade based on adjacent tweets
@@ -487,26 +499,36 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
         } else {
           delete tweet.dataset.miladymaxxerDiamond;
         }
-        // Check if user has liked - slightly more gold, trigger catch/level-up
+        // Check if user has liked
         if (hasUserLiked(tweet)) {
           tweet.dataset.miladymaxxerLiked = "true";
           if (!countedLikes.has(tweet)) {
             countedLikes.add(tweet);
             miladyLikesThisSession += 1;
             updateBadge(miladyLikesThisSession);
-            const handle = tweet.dataset.miladymaxxerHandle;
-            const xpKey = handle ? xpKeyForTweet(handle, tweet) : null;
-            if (handle && xpKey && !isTweetTooOldForXP(tweet) && !xpCreditedKeys.has(xpKey)) {
-              xpCreditedKeys.add(xpKey);
-              if (!ctx.isAccountCaught(handle)) {
-                ctx.onCatch(handle);
-                triggerCatchAnimation(tweet);
-              } else {
-                ctx.onLevelUp(handle, 0);
+            // Only credit XP if we previously saw this tweet as unliked
+            // (meaning the user clicked like during this session)
+            if (!seenTweets.has(tweet)) {
+              // First time seeing this element and it's already liked — pre-existing like, skip XP
+              seenTweets.add(tweet);
+            } else {
+              // We saw it before (as unliked), now it's liked — real like action
+              const handle = tweet.dataset.miladymaxxerHandle;
+              const xpKey = handle ? xpKeyForTweet(handle, tweet) : null;
+              if (handle && xpKey && !isTweetTooOldForXP(tweet) && !xpCreditedKeys.has(xpKey)) {
+                xpCreditedKeys.add(xpKey);
+                if (!ctx.isAccountCaught(handle)) {
+                  ctx.onCatch(handle);
+                  triggerCatchAnimation(tweet);
+                } else {
+                  ctx.onLevelUp(handle, 0);
+                }
               }
             }
           }
         } else {
+          // Mark as seen (unliked state) so future like click is credited
+          seenTweets.add(tweet);
           delete tweet.dataset.miladymaxxerLiked;
           if (countedLikes.has(tweet)) {
             countedLikes.delete(tweet);

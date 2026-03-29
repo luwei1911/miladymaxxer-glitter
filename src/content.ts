@@ -390,16 +390,12 @@ async function processProfilePage(): Promise<void> {
   // Extract profile handle from URL
   const profileHandle = normalizeHandle(window.location.pathname.split("/")[1] ?? "");
 
-  // Always refresh badges even if already processed
-  if (profileHandle) {
+  // Always refresh badges even if already processed (skip own profile)
+  const self = resolveSelfHandle();
+  if (profileHandle && profileHandle !== self) {
     const primaryColumn = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
     if (primaryColumn?.dataset.miladymaxxerProfile === "milady") {
       injectProfileLevelBadge(profileHandle);
-    }
-    // Always re-inject player badge on own profile (Twitter SPA may rebuild DOM)
-    const self = resolveSelfHandle();
-    if (self && profileHandle === self && !document.querySelector(".miladymaxxer-player-profile-level")) {
-      injectPlayerProfileBadge();
     }
   }
 
@@ -412,15 +408,13 @@ async function processProfilePage(): Promise<void> {
     if (primaryColumn) {
       primaryColumn.dataset.miladymaxxerProfile = "milady";
     }
-    injectProfileLevelBadge(profileHandle);
+    if (profileHandle !== self) {
+      injectProfileLevelBadge(profileHandle);
+    }
     return;
   }
 
-  // Check if this is the user's own profile — show player level badge
-  const self = resolveSelfHandle();
-  if (self && profileHandle === self) {
-    injectPlayerProfileBadge();
-  }
+  // Player level is shown next to the logo — don't duplicate on profile
 
   try {
     const result = await detectAvatar(avatar, normalizedUrl, {
@@ -432,7 +426,9 @@ async function processProfilePage(): Promise<void> {
     if (primaryColumn) {
       if (result.matched) {
         primaryColumn.dataset.miladymaxxerProfile = "milady";
-        injectProfileLevelBadge(profileHandle);
+        if (profileHandle !== self) {
+          injectProfileLevelBadge(profileHandle);
+        }
       } else {
         delete primaryColumn.dataset.miladymaxxerProfile;
       }
@@ -714,9 +710,11 @@ function injectProfileLevelBadge(handle: string): void {
   }
 
   // Detect if user follows this milady — grey pill if not following
-  const primaryCol = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
-  if (!primaryCol) return;
-  const followBtn = primaryCol.querySelector<HTMLElement>('[data-testid$="-follow"], [data-testid$="-unfollow"]');
+  // Scope follow button search to profile header area (above the tab bar)
+  const profileUserNameEl = document.querySelector<HTMLElement>(PROFILE_USER_NAME);
+  const profileHeaderArea = profileUserNameEl?.closest('[data-testid="primaryColumn"] > div > div') ?? document.querySelector<HTMLElement>(PRIMARY_COLUMN);
+  if (!profileHeaderArea) return;
+  const followBtn = profileHeaderArea.querySelector<HTMLElement>('[data-testid$="-follow"], [data-testid$="-unfollow"]');
   const isFollowing = followBtn ? !!followBtn.closest('[data-testid$="-unfollow"]') || !!followBtn.querySelector('[aria-label*="Following"]') : false;
   const pillClass = isFollowing ? "miladymaxxer-profile-level-pill" : "miladymaxxer-profile-level-pill miladymaxxer-profile-level-pill-grey";
 
@@ -733,11 +731,9 @@ function injectProfileLevelBadge(handle: string): void {
     existingBadge.remove();
   }
 
-  // Try multiple injection strategies
+  // Inject after @handle span
   const profileUserName = document.querySelector<HTMLElement>(PROFILE_USER_NAME);
   if (!profileUserName) return;
-
-  // Strategy 1: after @handle span
   const allSpans = profileUserName.querySelectorAll("span");
   for (const span of Array.from(allSpans)) {
     const text = span.textContent?.trim();
@@ -746,9 +742,6 @@ function injectProfileLevelBadge(handle: string): void {
       return;
     }
   }
-
-  // Strategy 2: append to the UserName element itself
-  profileUserName.appendChild(badge);
 }
 
 function injectPlayerProfileBadge(): void {
@@ -769,15 +762,16 @@ function injectPlayerProfileBadge(): void {
     `<span class="miladymaxxer-profile-level-pill">Milady Lvl: ${progress.level}</span>` +
     `<span class="miladymaxxer-profile-level-xp">${ascii} ${pct}%</span>`;
 
-  // Inject below the button row, same as milady profile badges
-  const primaryCol = document.querySelector<HTMLElement>(PRIMARY_COLUMN);
-  if (!primaryCol) return;
-
-  const followBtn = primaryCol.querySelector<HTMLElement>('[data-testid$="-follow"], [data-testid$="-unfollow"]');
-  const buttonRow = followBtn?.parentElement?.parentElement;
-  if (buttonRow) {
-    buttonRow.style.position = "relative";
-    buttonRow.appendChild(badge);
+  // Inject after @handle on own profile
+  const profileUserName = document.querySelector<HTMLElement>(PROFILE_USER_NAME);
+  if (!profileUserName) return;
+  const allSpans = profileUserName.querySelectorAll("span");
+  for (const span of Array.from(allSpans)) {
+    const text = span.textContent?.trim();
+    if (text?.startsWith("@") && span.children.length === 0) {
+      span.after(badge);
+      return;
+    }
   }
 }
 
