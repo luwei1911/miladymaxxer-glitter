@@ -6,9 +6,9 @@
   "scripts": {
     "build": "pnpm run build:app && pnpm run build:worker && pnpm run build:content && pnpm run build:background",
     "build:app": "vite build",
-    "build:worker": "esbuild src/worker.ts --bundle --format=iife --platform=browser --target=es2022 --sourcemap --outfile=dist/worker.js",
-    "build:content": "esbuild src/content.ts --bundle --format=iife --platform=browser --target=es2022 --sourcemap --outfile=dist/content.js",
-    "build:background": "esbuild src/background.ts --bundle --format=iife --platform=browser --target=es2022 --sourcemap --outfile=dist/background.js",
+    "build:worker": "node -e \"require('esbuild').buildSync({entryPoints:['src/worker.ts'],bundle:true,format:'iife',platform:'browser',target:'es2022',sourcemap:true,outdir:'dist'})\"",
+    "build:content": "node -e \"require('esbuild').buildSync({entryPoints:['src/content.ts'],bundle:true,format:'iife',platform:'browser',target:'es2022',sourcemap:true,outdir:'dist'})\"",
+    "build:background": "node -e \"require('esbuild').buildSync({entryPoints:['src/background.ts'],bundle:true,format:'iife',platform:'browser',target:'es2022',sourcemap:true,outdir:'dist'})\"",
     "check:pfp": "sh -c 'if [ \"$1\" = \"--\" ]; then shift; fi; uv run python scripts/check_pfp_url.py \"$@\"' --",
     "dev": "vite build --watch",
     "download:images": "tsx scripts/download-images.ts",

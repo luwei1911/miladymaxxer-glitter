@@ -1354,6 +1354,12 @@ export function injectStyles(): void {
     .miladymaxxer-placeholder button:hover {
       text-decoration: underline;
     }
-  `;
+  
+.mm-glitter-layer {
+  mix-blend-mode: screen;
+  border-radius: inherit;
+  overflow: hidden;
+}
+`;
   document.head.append(style);
 }
