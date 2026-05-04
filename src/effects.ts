@@ -509,20 +509,13 @@ export function applyMode(ctx: EffectsContext, tweet: HTMLElement, normalizedUrl
         } else {
           delete tweet.dataset.miladymaxxerDiamond;
         }
-        // Star glitter for highlighted tweets
-        if (tweet.dataset.miladymaxxerDiamond === "true") {
+        // Star glitter for ALL detected milady cards
+        if (tweet.dataset.miladymaxxer) {
           attachGlitter(tweet, {
-            density: 28,
-            maxParticles: 80,
-            colors: ['#ffffff', '#cdebff', '#fff4a3', '#ffd1f2', '#d8b9ff'],
-            sizeRange: [2, 7],
-          });
-        } else if (isCaught && postsLiked_ >= 75 && theme === "full") {
-          attachGlitter(tweet, {
-            density: 12,
-            maxParticles: 40,
-            colors: ['#ffd76b', '#fff1c2', '#ffffff'],
-            sizeRange: [1.5, 4.5],
+            density: 18,
+            maxParticles: 60,
+            colors: ['#ffffff', '#fff4a3', '#a8e7ff', '#ffd1f2', '#d8b9ff'],
+            sizeRange: [2, 6],
           });
         } else {
           detachGlitter(tweet);
